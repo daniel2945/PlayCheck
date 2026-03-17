@@ -26,6 +26,22 @@ const getHardware = async (req, res) => {
 
 const createHardware = async (req, res) => {
   try {
+    const { model } = req.body;
+
+    // 1. הגנה: בודקים אם המודל כבר קיים ב-DB (מתעלם מאותיות גדולות/קטנות)
+    const existingHardware = await Hardware.findOne({
+      model: { $regex: new RegExp(`^${model}$`, "i") },
+    });
+
+    if (existingHardware) {
+      // אם מצאנו אותו, עוצרים הכל ומחזירים שגיאה למנהל
+      return res.status(409).json({
+        success: false,
+        message: "הרכיב כבר קיים במערכת!",
+      });
+    }
+
+    // 2. אם הכל בסדר והרכיב חדש - הקוד המקורי והטוב שלך רץ:
     const newHardware = await Hardware.create(req.body);
     res.status(201).json({ success: true, data: newHardware });
   } catch (error) {
