@@ -1,27 +1,31 @@
 const express = require("express");
-const router = express.Router();
+const hardwareRouter = express.Router();
 
 const {
-  getHardware,
+  getAllHardwares,
   createHardware,
   updateHardware,
   deleteHardware,
+  searchHardware
 } = require("../controllers/hardware");
 
 const { verifyToken, forAdmins } = require("../middlewares/auth");
 
-router
-  .route("/")
+// --- נתיבים ציבוריים / לכל המשתמשים ---
+// שליפת כל החומרה
+hardwareRouter.get('/search', searchHardware);
 
-  .get(getHardware)
-  // יצירה - שרשרת אבטחה: קודם מוודאים טוקן, אחר כך מוודאים מנהל, ורק אז יוצרים
-  .post(verifyToken, forAdmins, createHardware);
+// --- נתיבי ניהול (Admins Only) ---
+// כל מה שמוגדר מתחת לשורה הזו יחייב טוקן והרשאת מנהל באופן אוטומטי
+hardwareRouter.use(verifyToken, forAdmins);
 
-router
-  .route("/:id")
-  // עריכה - רק מנהל מחובר
-  .put(verifyToken, forAdmins, updateHardware)
-  // מחיקה - רק מנהל מחובר
-  .delete(verifyToken, forAdmins, deleteHardware);
+// יצירת חומרה חדשה
+hardwareRouter.post('/', createHardware);
+hardwareRouter.get('/', getAllHardwares);
 
-module.exports = router;
+// פעולות על פריט חומרה ספציפי (עריכה ומחיקה)
+hardwareRouter.route('/:id')
+  .put(updateHardware)
+  .delete(deleteHardware);
+
+module.exports = hardwareRouter;

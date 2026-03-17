@@ -3,7 +3,7 @@ const cors = require("cors");
 const errorHandler = require("./middlewares/errorHandler");
 const mongoose = require("mongoose");
 const authRouter = require("./routes/auth");
-const hardwareRoutes = require("./routes/hardware");
+const hardwareRouter = require("./routes/hardware");
 
 require("dotenv").config();
 const app = express();
@@ -11,8 +11,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRouter);
+app.use("/api/hardware", hardwareRouter);
+
+
+
+
 app.use(errorHandler);
-app.use("/api/hardware", hardwareRoutes);
+
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

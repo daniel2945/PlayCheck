@@ -4,8 +4,8 @@ const User = require("../models/User");
 
 const register = async (req, res, next) => {
   try {
-    const { email, password, userName } = req.body;
-    if (!email || !password || !userName) {
+    const { email, password, userName, cpuId, gpuId, ram_gb } = req.body;
+    if (!email || !password || !userName || !cpuId || !gpuId || !ram_gb ) {
       return res.status(400).json({ success: false, data: "fields missing" });
     }
     const isExist = await User.findOne({ email });
@@ -18,6 +18,11 @@ const register = async (req, res, next) => {
       userName,
       password,
       email,
+      my_pc: {
+        cpuId,
+        gpuId,
+       ram_gb: Number(ram_gb)
+      }
     });
     await newUser.save();
     res.status(201).json({

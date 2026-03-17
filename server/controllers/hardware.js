@@ -4,19 +4,25 @@ const Hardware = require("../models/Hardware");
 // פונקציות פתוחות לכולם (Public)
 // ==========================================
 
-const getHardware = async (req, res) => {
+const searchHardware = async (req, res, next) => {
   try {
-    const { type } = req.query;
-    const filter = type ? { type } : {};
-
-    const hardwareList = await Hardware.find(filter);
-    res
-      .status(200)
-      .json({ success: true, count: hardwareList.length, data: hardwareList });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "שגיאת שרת בשליפת החומרה" });
+    const { q, type } = req.query;
+    if (!q || q.length < 2) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+    const results = await Hardware.find({
+      type: type.toUpperCase(),
+      model: { $regex: q, $options: "i" },
+    })
+      .sort({ benchmarkScore: -1 })
+      .limit(10)
+      .select("model brand benchmarkScore type");
+    if (!results) {
+      res.status(400).json({ success: false, data: "hardwares not found" });
+    }
+    res.status(200).json({ success: true, data: results });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -24,7 +30,7 @@ const getHardware = async (req, res) => {
 // פונקציות למנהלים בלבד (Admin Only)
 // ==========================================
 
-const createHardware = async (req, res) => {
+const createHardware = async (req, res, next) => {
   try {
     const { model } = req.body;
 
@@ -41,15 +47,14 @@ const createHardware = async (req, res) => {
       });
     }
 
-    // 2. אם הכל בסדר והרכיב חדש - הקוד המקורי והטוב שלך רץ:
     const newHardware = await Hardware.create(req.body);
     res.status(201).json({ success: true, data: newHardware });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const updateHardware = async (req, res) => {
+const updateHardware = async (req, res, next) => {
   try {
     const hardware = await Hardware.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -64,11 +69,11 @@ const updateHardware = async (req, res) => {
 
     res.status(200).json({ success: true, data: hardware });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
-const deleteHardware = async (req, res) => {
+const deleteHardware = async (req, res, next) => {
   try {
     const hardware = await Hardware.findByIdAndDelete(req.params.id);
 
@@ -80,13 +85,24 @@ const deleteHardware = async (req, res) => {
 
     res.status(200).json({ success: true, message: "החומרה נמחקה בהצלחה" });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    next(error);
   }
 };
 
+const getAllHardwares = async (req, res, next) => {
+  try{
+    const results = await Hardware.find();
+    res.status(200).json({success: true, data: results})
+  }
+  catch(error){
+    next(error)
+  }
+}
+
 module.exports = {
-  getHardware,
+  searchHardware,
   createHardware,
   updateHardware,
   deleteHardware,
+  getAllHardwares
 };
