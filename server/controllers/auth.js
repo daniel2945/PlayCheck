@@ -51,7 +51,6 @@ const login = async (req, res, next) => {
         isAdmin: user.isAdmin,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "2h" },
     );
     res.status(200).json({ success: true, token: token });
   } catch (err) {
