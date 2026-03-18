@@ -16,7 +16,7 @@ const searchHardware = async (req, res, next) => {
     })
       .sort({ benchmarkScore: -1 })
       .limit(10)
-      .select("model brand benchmarkScore type");
+      .select("_id model brand benchmarkScore type");
     if (!results) {
       res.status(400).json({ success: false, data: "hardwares not found" });
     }
@@ -90,19 +90,18 @@ const deleteHardware = async (req, res, next) => {
 };
 
 const getAllHardwares = async (req, res, next) => {
-  try{
+  try {
     const results = await Hardware.find();
-    res.status(200).json({success: true, data: results})
+    res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    next(error);
   }
-  catch(error){
-    next(error)
-  }
-}
+};
 
 module.exports = {
   searchHardware,
   createHardware,
   updateHardware,
   deleteHardware,
-  getAllHardwares
+  getAllHardwares,
 };

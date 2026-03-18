@@ -2,24 +2,26 @@ const jwt = require("jsonwebtoken");
 
 const verifyToken = async (req, res, next) => {
   const authHeader = req.header("Authorization");
-  if (!authHeader) {
-    return res.status(400).json({ data: "there is no token" });
-  }
 
-  try {
-    if (authHeader && authHeader.startsWith("Bearer")) {
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
       const token = authHeader.split(" ")[1];
-      if (!token) {
-        res.status(401);
-        next(new Error("Not authorized, no token provided"));
-      }
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;
-      next();
+      return next();
+    } catch (err) {
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message: "Not authorized, token failed or expired",
+        });
     }
-  } catch (err) {
-    next(new Error("Not authorized, token failed"));
   }
+
+  return res
+    .status(401)
+    .json({ success: false, message: "Not authorized, no token provided" });
 };
 
 const forAdmins = (req, res, next) => {
