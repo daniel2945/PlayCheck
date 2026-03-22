@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 const Hardware = require("../models/Hardware"); // ודא שהנתיב נכון
 const newData = require("./new_hardware.json"); // מושך את ה-JSON שיצרנו
 require("dotenv").config();
+
+const escapeRegex = (string) => {
+  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+};
+
 const updateDB = async () => {
   try {
     const dbURI = process.env.MONGO_URI;
@@ -12,8 +17,9 @@ const updateDB = async () => {
     let skippedCount = 0;
 
     for (const item of newData) {
+      const escapedModel = escapeRegex(item.model || "");
       const exists = await Hardware.findOne({
-        model: { $regex: new RegExp(`^${item.model}$`, "i") },
+        model: { $regex: new RegExp(`^${escapedModel}$`, "i") },
       });
 
       if (!exists) {

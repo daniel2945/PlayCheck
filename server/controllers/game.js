@@ -5,11 +5,42 @@ const { parseGameRequirements } = require("../utils/hardwareParser");
 const User = require("../models/User");
 const Hardware = require("../models/Hardware");
 
+// Utility to extract raw hardware strings from RAWG API requirement texts
+const extractHardwareText = (text, type) => {
+  if (!text || typeof text !== "string") return "Not specified by developer";
+
+  console.log(`\n--- RAWG RAW TEXT (${type}) ---`, text, "\n");
+
+  // 1. Strip HTML tags (replace with space to avoid merging words like "systemOS")
+  let cleanText = text.replace(/<[^>]*>?/gm, " ");
+  // 2. Normalize whitespace (remove newlines, tabs, and double spaces)
+  cleanText = cleanText.replace(/\s+/g, " ").trim();
+
+  const regex =
+    type === "CPU"
+      ? /(?:Processor \(CPU\)|Processor|CPU):\s*(.*?)(?=\s*(?:,|Graphics:|Memory:|OS:|$))/i
+      : /(?:Graphics Card|Video Card|Graphics|Video|GPU):\s*(.*?)(?=\s*(?:,|DirectX:|Storage:|$))/i;
+  const match = cleanText.match(regex);
+  return match && match[1] ? match[1].trim() : "Not specified by developer";
+};
+
+// Helper to dynamically format RAM (GB vs MB)
+const formatRam = (ramGb) => {
+  if (ramGb === undefined || ramGb === null || ramGb === 0)
+    return "Not specified by developer";
+  const num = Number(ramGb);
+  if (isNaN(num)) return `${ramGb}`;
+  if (num < 1) return `${Math.round(num * 1024)} MB`;
+  return `${num} GB`;
+};
+
 const searchGames = async (req, res, next) => {
   try {
     const searchQuery = req.query.q;
     if (!searchQuery) {
-      return res.status(400).json({ message: "there is no query" });
+      return res
+        .status(400)
+        .json({ success: false, message: "there is no query" });
     }
     const response = await axios.get("https://api.rawg.io/api/games", {
       params: {
@@ -26,7 +57,15 @@ const searchGames = async (req, res, next) => {
     }));
     res.status(200).json({ success: true, data: games });
   } catch (err) {
-    next(err);
+    // Deep log the exact error from Axios or Network
+    console.error(
+      "[RAWG API ERROR in searchGames]:",
+      err.response?.data || err.message,
+    );
+    return res.status(500).json({
+      success: false,
+      message: "RAWG error: " + (err.response?.data?.error || err.message),
+    });
   }
 };
 
@@ -39,7 +78,9 @@ const searchGame = async (req, res, next) => {
 
     const existingGame = await Game.findById(id);
     if (existingGame) {
-      return res.status(200).json({ success: true, data: existingGame, fromLocal: true });
+      return res
+        .status(200)
+        .json({ success: true, data: existingGame, fromLocal: true });
     }
 
     const response = await axios.get(`https://api.rawg.io/api/games/${id}`, {
@@ -97,6 +138,17 @@ const createGame = async (req, res, next) => {
     recommended.cpuScore = Math.max(minimum.cpuScore, recommended.cpuScore);
     recommended.gpuScore = Math.max(minimum.gpuScore, recommended.gpuScore);
     recommended.ramGb = Math.max(minimum.ramGb, recommended.ramGb);
+
+    minimum.cpuText =
+      minimum.cpuText || extractHardwareText(requirements.minimum, "CPU");
+    minimum.gpuText =
+      minimum.gpuText || extractHardwareText(requirements.minimum, "GPU");
+    recommended.cpuText =
+      recommended.cpuText ||
+      extractHardwareText(requirements.recommended, "CPU");
+    recommended.gpuText =
+      recommended.gpuText ||
+      extractHardwareText(requirements.recommended, "GPU");
 
     const newGame = new Game({
       _id,
@@ -211,6 +263,97 @@ const updateGame = async (req, res, next) => {
   }
 };
 
+// Temporary function to clear all cached games from MongoDB
+const clearAllGames = async (req, res, next) => {
+  try {
+    await Game.deleteMany({});
+    res
+      .status(200)
+      .json({ success: true, message: "All cached games cleared" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getOrFetchGame = async (gameId) => {
+  let game = await Game.findById(gameId);
+  if (game) return game;
+
+  const response = await axios.get(`https://api.rawg.io/api/games/${gameId}`, {
+    params: { key: apiKey },
+  });
+  const gameData = response.data;
+  const pcPlatform = gameData.platforms?.find(
+    (p) => p.platform.name.toLowerCase() === "pc",
+  );
+
+  const pcRequirements =
+    pcPlatform && pcPlatform.requirements
+      ? pcPlatform.requirements
+      : { minimum: null, recommended: null };
+
+  const cpuList = await Hardware.find({ type: "CPU" });
+  const gpuList = await Hardware.find({ type: "GPU" });
+
+  const minimum = await parseGameRequirements(
+    pcRequirements.minimum,
+    cpuList,
+    gpuList,
+    true,
+    gameData.name,
+    gameData.description,
+  );
+  const recommended = await parseGameRequirements(
+    pcRequirements.recommended,
+    cpuList,
+    gpuList,
+    false,
+    gameData.name,
+    gameData.description,
+  );
+
+  recommended.cpuScore = Math.max(minimum.cpuScore, recommended.cpuScore);
+  recommended.gpuScore = Math.max(minimum.gpuScore, recommended.gpuScore);
+  recommended.ramGb = Math.max(minimum.ramGb, recommended.ramGb);
+
+  minimum.cpuText =
+    minimum.cpuText || extractHardwareText(pcRequirements.minimum, "CPU");
+  minimum.gpuText =
+    minimum.gpuText || extractHardwareText(pcRequirements.minimum, "GPU");
+  recommended.cpuText =
+    recommended.cpuText ||
+    extractHardwareText(pcRequirements.recommended, "CPU");
+  recommended.gpuText =
+    recommended.gpuText ||
+    extractHardwareText(pcRequirements.recommended, "GPU");
+
+  game = new Game({
+    _id: gameId,
+    title: gameData.name,
+    image: gameData.background_image,
+    description: gameData.description,
+    requirements: {
+      minimum: {
+        cpuScore: minimum.cpuScore,
+        gpuScore: minimum.gpuScore,
+        ramGb: minimum.ramGb,
+        cpuText: minimum.cpuText,
+        gpuText: minimum.gpuText,
+      },
+      recommended: {
+        cpuScore: recommended.cpuScore,
+        gpuScore: recommended.gpuScore,
+        ramGb: recommended.ramGb,
+        cpuText: recommended.cpuText,
+        gpuText: recommended.gpuText,
+      },
+    },
+  });
+
+  await game.save();
+  return game;
+};
+
 const checkCompatibilityGuest = async (req, res, next) => {
   try {
     const gameId = req.params.id;
@@ -227,11 +370,16 @@ const checkCompatibilityGuest = async (req, res, next) => {
       });
     }
 
-    const game = await Game.findById(gameId);
-    if (!game)
-      return res
-        .status(404)
-        .json({ success: false, data: "Game not found in database" });
+    let game;
+    try {
+      game = await getOrFetchGame(gameId);
+    } catch (error) {
+      console.error("Error fetching or parsing game:", error);
+      return res.status(404).json({
+        success: false,
+        data: "Game not found and could not be fetched",
+      });
+    }
 
     const { minimum, recommended } = game.requirements;
     const getComponentGrade = (userScore, minScore, recScore) => {
@@ -267,6 +415,23 @@ const checkCompatibilityGuest = async (req, res, next) => {
         gameTitle: game.title,
         overall: overallGrade,
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
+        specsDetails: {
+          cpu: {
+            user: `${cpuUser.brand} ${cpuUser.model}`,
+            min: minimum.cpuText || "Not specified by developer",
+            rec: recommended.cpuText || "Not specified by developer",
+          },
+          gpu: {
+            user: `${gpuUser.brand} ${gpuUser.model}`,
+            min: minimum.gpuText || "Not specified by developer",
+            rec: recommended.gpuText || "Not specified by developer",
+          },
+          ram: {
+            user: formatRam(ramUser),
+            min: formatRam(minimum.ramGb),
+            rec: formatRam(recommended.ramGb),
+          },
+        },
       },
     });
   } catch (err) {
@@ -298,11 +463,16 @@ const checkCompatibilityUser = async (req, res, next) => {
         .json({ success: false, data: "Hardware details not found" });
     }
 
-    const game = await Game.findById(gameId);
-    if (!game)
-      return res
-        .status(404)
-        .json({ success: false, data: "Game not found in database" });
+    let game;
+    try {
+      game = await getOrFetchGame(gameId);
+    } catch (error) {
+      console.error("Error fetching or parsing game:", error);
+      return res.status(404).json({
+        success: false,
+        data: "Game not found and could not be fetched",
+      });
+    }
 
     const { minimum, recommended } = game.requirements;
     const getComponentGrade = (userScore, minScore, recScore) => {
@@ -338,6 +508,23 @@ const checkCompatibilityUser = async (req, res, next) => {
         gameTitle: game.title,
         overall: overallGrade,
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
+        specsDetails: {
+          cpu: {
+            user: `${cpuUser.brand} ${cpuUser.model}`,
+            min: minimum.cpuText || "Not specified by developer",
+            rec: recommended.cpuText || "Not specified by developer",
+          },
+          gpu: {
+            user: `${gpuUser.brand} ${gpuUser.model}`,
+            min: minimum.gpuText || "Not specified by developer",
+            rec: recommended.gpuText || "Not specified by developer",
+          },
+          ram: {
+            user: formatRam(ramUser),
+            min: formatRam(minimum.ramGb),
+            rec: formatRam(recommended.ramGb),
+          },
+        },
       },
     });
   } catch (err) {
@@ -355,4 +542,5 @@ module.exports = {
   updateGame,
   checkCompatibilityGuest,
   checkCompatibilityUser,
+  clearAllGames,
 };

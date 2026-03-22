@@ -12,12 +12,14 @@ const searchHardware = async (req, res, next) => {
     }
     const results = await Hardware.find({
       type: type.toUpperCase(),
-      model: { $regex: q, $options: "i" },
-      brand: { $regex: q, $options: "i" },
+      $or: [
+        { model: { $regex: q, $options: "i" } },
+        { brand: { $regex: q, $options: "i" } },
+      ],
     })
       .sort({ benchmarkScore: -1 })
       .limit(10)
-      .select("model brand benchmarkScore type");
+      .select("_id model brand benchmarkScore type");
     if (!results) {
       res.status(400).json({ success: false, data: "hardwares not found" });
     }
