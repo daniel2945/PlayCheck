@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function Auth({ view, setView, setToken }) {
+export default function Auth({ view, setView, setToken, setUser }) {
   const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,14 +20,17 @@ export default function Auth({ view, setView, setToken }) {
               email,
               password,
               userName,
-              // Passing fallback 24-char ObjectIds if guest specs don't exist to prevent 400 error
-              cpuId:
-                JSON.parse(localStorage.getItem("guestSpecs"))?.cpu?._id ||
-                "000000000000000000000000",
-              gpuId:
-                JSON.parse(localStorage.getItem("guestSpecs"))?.gpu?._id ||
-                "000000000000000000000000",
-              ram_gb: JSON.parse(localStorage.getItem("guestSpecs"))?.ram || 16,
+              myPc: {
+                // Passing fallback 24-char ObjectIds if guest specs don't exist to prevent 400 error
+                cpuId:
+                  JSON.parse(localStorage.getItem("guestSpecs"))?.cpu?._id ||
+                  "000000000000000000000000",
+                gpuId:
+                  JSON.parse(localStorage.getItem("guestSpecs"))?.gpu?._id ||
+                  "000000000000000000000000",
+                ramGb:
+                  JSON.parse(localStorage.getItem("guestSpecs"))?.ram || 16,
+              },
             };
 
       const res = await fetch(`http://localhost:3000${endpoint}`, {
@@ -54,8 +57,16 @@ export default function Auth({ view, setView, setToken }) {
           });
           setTimeout(() => setView("login"), 2000);
         } else {
-          setToken(data.token);
-          localStorage.setItem("token", data.token);
+          if (data.token) {
+            localStorage.setItem("token", data.token);
+            setToken(data.token);
+          }
+          if (data.user) {
+            localStorage.setItem("user", JSON.stringify(data.user));
+            if (setUser) setUser(data.user);
+          }
+          // Proactively wipe any stale guest specs to enforce DB as the single source of truth
+          localStorage.removeItem("guestSpecs");
           setView("profile");
         }
       } else {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import HardwareInput from "../components/HardwareInput";
 
-export default function MyComputer({ setView, token }) {
+export default function MyComputer({ setView, token, setUser }) {
   const [cpu, setCpu] = useState(null);
   const [gpu, setGpu] = useState(null);
   const [ram, setRam] = useState(16);
@@ -48,6 +48,25 @@ export default function MyComputer({ setView, token }) {
 
         const data = await res.json();
         if (res.ok || data.success) {
+          if (setUser) {
+            setUser((prev) => {
+              // Prefer the backend's source of truth if provided, otherwise fallback locally
+              const updatedUser = {
+                ...prev,
+                ...data.data,
+                myPc: data.data?.myPc || { cpuId: cpu, gpuId: gpu, ramGb: ram },
+                my_pc: data.data?.my_pc || {
+                  cpuId: cpu,
+                  gpuId: gpu,
+                  ram_gb: ram,
+                },
+              };
+              localStorage.setItem("user", JSON.stringify(updatedUser));
+              return updatedUser;
+            });
+          }
+          // CRITICAL: Explicitly clear local guest specs to prevent state conflicts
+          localStorage.removeItem("guestSpecs");
           setSaveMessage("✅ Specs saved to Cloud!");
         } else {
           setSaveMessage("⚠️ Failed to save to Cloud.");

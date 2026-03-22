@@ -14,7 +14,7 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
     if (value.length >= 2) {
       try {
         const res = await fetch(
-          `http://localhost:3000/api/hardware/search?q=${value}&type=${type}&limit=10`,
+          `http://localhost:3000/api/hardware/search?q=${encodeURIComponent(value)}&type=${encodeURIComponent(type)}&limit=10`,
         );
         const data = await res.json();
 

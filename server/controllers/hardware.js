@@ -12,7 +12,10 @@ const searchHardware = async (req, res, next) => {
     }
     const results = await Hardware.find({
       type: type.toUpperCase(),
-      model: { $regex: q, $options: "i" },
+      $or: [
+        { model: { $regex: q, $options: "i" } },
+        { brand: { $regex: q, $options: "i" } },
+      ],
     })
       .sort({ benchmarkScore: -1 })
       .limit(10)

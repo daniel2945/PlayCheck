@@ -1,49 +1,30 @@
 import { useState, useEffect } from "react";
 
-export default function Profile({ token }) {
+export default function Profile({ token, user }) {
   const [specs, setSpecs] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSpecs = async () => {
-      if (token) {
-        try {
-          const res = await fetch("http://localhost:3000/api/users/profile", {
-            headers: { Authorization: `Bearer ${token}` },
+    if (token) {
+      if (user) {
+        const pc = user.myPc || user.my_pc;
+        if (pc && (pc.cpuId || pc.cpu)) {
+          setSpecs({
+            cpu: pc.cpuId || pc.cpu,
+            gpu: pc.gpuId || pc.gpu,
+            ram: pc.ramGb || pc.ram_gb || pc.ram,
           });
-
-          const contentType = res.headers.get("content-type");
-          if (!res.ok && (!contentType || !contentType.includes("application/json"))) {
-            throw new Error("API route not found");
-          }
-
-          const data = await res.json();
-          if (data.success && data.data?.my_pc) {
-            setSpecs({
-              cpu: data.data.my_pc.cpu || data.data.my_pc.cpuId,
-              gpu: data.data.my_pc.gpu || data.data.my_pc.gpuId,
-              ram: data.data.my_pc.ram_gb,
-            });
-          } else {
-            setSpecs(null);
-          }
-        } catch (err) {
-          console.error("Failed to fetch specs", err);
-          setSpecs(null);
-        }
-      } else {
-        const localSpecs = JSON.parse(localStorage.getItem("guestSpecs"));
-        if (localSpecs) {
-          setSpecs(localSpecs);
         } else {
           setSpecs(null);
         }
+        setLoading(false);
       }
+    } else {
+      const localSpecs = JSON.parse(localStorage.getItem("guestSpecs"));
+      setSpecs(localSpecs || null);
       setLoading(false);
-    };
-
-    fetchSpecs();
-  }, [token]);
+    }
+  }, [token, user]);
 
   return (
     <div className="px-6 py-12 max-w-4xl mx-auto space-y-8">

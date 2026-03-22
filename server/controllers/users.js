@@ -28,6 +28,7 @@ const updateSpecs = async (req, res, next) => {
     const updatedUser = await User.findByIdAndUpdate(
       req.user?.id || req.userId,
       {
+        myPc: { cpuId, gpuId, ramGb: ram_gb },
         my_pc: {
           cpuId,
           gpuId,
@@ -35,7 +36,9 @@ const updateSpecs = async (req, res, next) => {
         },
       },
       { new: true, runValidators: true },
-    );
+    )
+      .populate("myPc.cpuId")
+      .populate("myPc.gpuId");
 
     if (!updatedUser) {
       return res
@@ -46,7 +49,7 @@ const updateSpecs = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Specs updated successfully",
-      data: updatedUser.my_pc,
+      data: updatedUser,
     });
   } catch (error) {
     console.error("SPECS UPDATE ERROR:", error);

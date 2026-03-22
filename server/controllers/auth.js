@@ -4,8 +4,15 @@ const User = require("../models/User");
 
 const register = async (req, res, next) => {
   try {
-    const { email, password, userName, cpuId, gpuId, ram_gb } = req.body;
-    if (!email || !password || !userName || !cpuId || !gpuId || !ram_gb ) {
+    const { email, password, userName, myPc } = req.body;
+    if (
+      !email ||
+      !password ||
+      !userName ||
+      !myPc.cpuId ||
+      !myPc.gpuId ||
+      !myPc.ramGb
+    ) {
       return res.status(400).json({ success: false, data: "fields missing" });
     }
     const isExist = await User.findOne({ email });
@@ -18,11 +25,11 @@ const register = async (req, res, next) => {
       userName,
       password,
       email,
-      my_pc: {
-        cpuId,
-        gpuId,
-       ram_gb: Number(ram_gb)
-      }
+      myPc: {
+        cpuId: myPc.cpuId,
+        gpuId: myPc.gpuId,
+        ramGb: Number(myPc.ramGb),
+      },
     });
     await newUser.save();
     res.status(201).json({
@@ -38,17 +45,26 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { password, email } = req.body;
-    const user = await User.findOne({ email });
+    console.log(`[LOGIN DEBUG] Attempting login for email: ${email}`);
+
+    const user = await User.findOne({ email })
+      .populate("myPc.cpuId")
+      .populate("myPc.gpuId");
+
+    console.log(`[LOGIN DEBUG] User found in DB:`, !!user);
+
     if (!user) {
       return res.status(400).json({ success: false, data: "user not found" });
     }
     const isVerified = await bcrypt.compare(password, user.password);
+    console.log(`[LOGIN DEBUG] Password match:`, isVerified);
+
     if (!isVerified) {
       return res
         .status(400)
         .json({ success: false, data: "password is invalid" });
     }
-    const token = await jwt.sign(
+    const token = jwt.sign(
       {
         id: user._id,
         userName: user.userName,
@@ -56,9 +72,21 @@ const login = async (req, res, next) => {
         isAdmin: user.isAdmin,
       },
       process.env.JWT_SECRET,
+      { expiresIn: "1d" },
     );
-    res.status(200).json({ success: true, token: token });
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    console.log(`[LOGIN DEBUG] Successful login! Sending user data back.`);
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: userResponse,
+    });
   } catch (err) {
+    console.error("[LOGIN ERROR DEBUG]", err);
     next(err);
   }
 };
@@ -80,13 +108,18 @@ const changeMyPassword = async (req, res, next) => {
 
 const getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id)
+      .select("-password")
+      .populate("myPc.cpuId")
+      .populate("myPc.gpuId")
+      .populate("my_pc.cpuId")
+      .populate("my_pc.gpuId");
     if (!user) {
       return res.status(404).json({ success: false, data: "user not found" });
     }
     res.status(200).json({
       success: true,
-      data: { userName: user.userName, email: user.email },
+      data: user,
     });
   } catch (err) {
     next(err);

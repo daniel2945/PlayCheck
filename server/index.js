@@ -1,19 +1,24 @@
 const express = require("express");
+require("dotenv").config();
 const cors = require("cors");
 const errorHandler = require("./middlewares/errorHandler");
 const mongoose = require("mongoose");
 const authRouter = require("./routes/auth");
 const hardwareRouter = require("./routes/hardware");
 const userRouter = require("./routes/users");
+const gameRouter = require("./routes/game");
 
-require("dotenv").config();
+
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRouter);
 app.use("/api/hardware", hardwareRouter);
 app.use("/api/users", userRouter);
+app.use("/api/game", gameRouter)
+
+
 
 app.use(errorHandler);
 
