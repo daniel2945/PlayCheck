@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
-const UserSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     userName: {
       type: String,
@@ -23,16 +23,16 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    my_pc: {
+    myPc: {
       cpuId: { type: mongoose.Schema.Types.ObjectId, ref: "Hardware" },
       gpuId: { type: mongoose.Schema.Types.ObjectId, ref: "Hardware" },
-      ram_gb: { type: Number },
+      ramGb: { type: Number },
     },
   },
   { timestamps: true },
 );
 
-UserSchema.pre("save", async function (next) {
+userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
   }
@@ -45,5 +45,5 @@ UserSchema.pre("save", async function (next) {
   }
 });
 
-const User = mongoose.model("User", UserSchema);
+const User = mongoose.model("User", userSchema);
 module.exports = User;

@@ -10,11 +10,13 @@ const hardWareSchema = new mongoose.Schema(
     brand: {
       type: String,
       required: true,
+      trim: true
     },
     model: {
       type: String,
       required: true,
       unique: true,
+      trim: true
     },
     benchmarkScore: {
       type: Number,
