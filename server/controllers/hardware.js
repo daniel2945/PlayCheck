@@ -13,6 +13,7 @@ const searchHardware = async (req, res, next) => {
     const results = await Hardware.find({
       type: type.toUpperCase(),
       model: { $regex: q, $options: "i" },
+      brand: { $regex: q, $options: "i" },
     })
       .sort({ benchmarkScore: -1 })
       .limit(10)
@@ -90,19 +91,18 @@ const deleteHardware = async (req, res, next) => {
 };
 
 const getAllHardwares = async (req, res, next) => {
-  try{
+  try {
     const results = await Hardware.find();
-    res.status(200).json({success: true, data: results})
+    res.status(200).json({ success: true, data: results });
+  } catch (error) {
+    next(error);
   }
-  catch(error){
-    next(error)
-  }
-}
+};
 
 module.exports = {
   searchHardware,
   createHardware,
   updateHardware,
   deleteHardware,
-  getAllHardwares
+  getAllHardwares,
 };

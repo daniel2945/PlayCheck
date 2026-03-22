@@ -15,20 +15,16 @@ const {
 } = require("../controllers/auth");
 const { verifyToken, forAdmins } = require('../middlewares/auth');
 
-// --- נתיבים ציבוריים ---
 authRouter.post('/register', register);
 authRouter.post('/login', login);
 
-// --- נתיבים עבור המשתמש המחובר (עצמי) ---
-// שימוש ב-me/ הוא הסטנדרט המקובל עבור פעולות של משתמש על עצמו
-authRouter.use('/me', verifyToken); // הגנת טוקן גורפת לכל נתיבי ה-me
+authRouter.use('/me', verifyToken); 
 
 authRouter.get('/me', getUser);
 authRouter.put('/me/email', changeMyEmail);
 authRouter.put('/me/name', changeMyName);
 authRouter.put('/me/password', changeMyPassword);
 
-// --- נתיבי ניהול (Admins Only) ---
 authRouter.route('/')
   .get(verifyToken, forAdmins, getAllUsers);
 
