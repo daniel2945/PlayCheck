@@ -28,10 +28,10 @@ export default function PcSetup() {
     if (token) {
       try {
         // שימוש נקי ב-API_CALL במקום fetch ענק
-        const data = await API_CALL("/api/users/specs", "PUT", {
+        const data = await API_CALL("/api/user/specs", "PUT", {
           cpuId: cpu._id,
           gpuId: gpu._id,
-          ram_gb: ram, // מוודא שזה תואם לאיך שהשרת שלך מצפה לקבל את זה
+          ramGb: ram, // מוודא שזה תואם לאיך שהשרת שלך מצפה לקבל את זה
         });
 
         if (data.success) {

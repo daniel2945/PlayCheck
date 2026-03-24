@@ -28,21 +28,24 @@ const userSchema = new mongoose.Schema(
       gpuId: { type: mongoose.Schema.Types.ObjectId, ref: "Hardware" },
       ramGb: { type: Number },
     },
+    // היסטוריית חיפושים
+    searchHistory: [
+      {
+        gameId: { type: Number, ref: "Game", required: true },
+        searchedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
-userSchema.pre("save", async function (next) {
+// ✨ התיקון: הפונקציה כבר לא מקבלת next, ובמקום return next() יש רק return ✨
+userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
-    return next();
+    return; // יוצאים מהפונקציה בהצלחה
   }
-  try {
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(this.password, salt);
-    this.password = hashedPassword;
-  } catch (err) {
-    next(err);
-  }
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 const User = mongoose.model("User", userSchema);

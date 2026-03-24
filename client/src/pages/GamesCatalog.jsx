@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import API_CALL from "../api/API_CALL";
 import GameCard from "../components/GameCard";
 
 export default function GamesCatalog() {
   const navigate = useNavigate();
-  
-  // הסטייט של הטופס
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // הסטייט ה"נעול" - קריטי כדי ש'טען עוד' יזכור מה אנחנו מסננים
-  const [activeQuery, setActiveQuery] = useState("");
-  const [activeYear, setActiveYear] = useState("");
+  // שולפים את הערכים מהכתובת למעלה (אם יש)
+  const qFromUrl = searchParams.get("q") || "";
+  const yearFromUrl = searchParams.get("year") || "";
+
+  // הסטייט של הטופס (מקבל את הערך הראשוני מה-URL)
+  const [searchQuery, setSearchQuery] = useState(qFromUrl);
+  const [selectedYear, setSelectedYear] = useState(yearFromUrl);
 
   const [games, setGames] = useState([]);
   const [page, setPage] = useState(1);
@@ -24,12 +25,10 @@ export default function GamesCatalog() {
     setLoading(true);
     setError("");
     try {
-      // לא שולחים "popular" יותר! 
       const params = new URLSearchParams({
         page: pageNum,
       });
 
-      // מוסיפים q רק אם באמת הקלדת טקסט
       if (queryToUse && queryToUse.trim() !== "") {
         params.append("q", queryToUse);
       }
@@ -48,11 +47,8 @@ export default function GamesCatalog() {
           setGames(data.data);
         }
         
-        // השרת שלך כבר מחזיר hasNextPage מוכן! משתמשים בו ישירות
         setHasNextPage(data.hasNextPage);
         setPage(pageNum);
-        setActiveQuery(queryToUse);
-        setActiveYear(yearToUse);
       } else {
         if (!isLoadMore) setGames([]);
         setHasNextPage(false);
@@ -64,17 +60,23 @@ export default function GamesCatalog() {
     }
   };
 
+  // מאזין לשינויים ב-URL ומושך נתונים מחדש
   useEffect(() => {
-    fetchGames(1, "", "", false);
-  }, []);
+    fetchGames(1, qFromUrl, yearFromUrl, false);
+  }, [qFromUrl, yearFromUrl]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchGames(1, searchQuery, selectedYear, false);
+    // במקום למשוך נתונים, אנחנו מעדכנים את ה-URL. זה כבר יפעיל את ה-useEffect!
+    const params = {};
+    if (searchQuery) params.q = searchQuery;
+    if (selectedYear) params.year = selectedYear;
+    setSearchParams(params);
   };
 
   const handleLoadMore = () => {
-    fetchGames(page + 1, activeQuery, activeYear, true);
+    // 'טען עוד' קורא מה-URL כדי לזכור תמיד מה מסונן
+    fetchGames(page + 1, qFromUrl, yearFromUrl, true);
   };
 
   const handleGameClick = (game) => {
@@ -112,7 +114,6 @@ export default function GamesCatalog() {
       {/* גריד המשחקים */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-12">
         {games.map((game) => {
-          // ✨ התיקון הקריטי: קוראים לזה releaseDate בדיוק כמו בשרת שלך!
           const releasedYear = game.releasedDate ? game.releasedDate.substring(0, 4) : "TBA";
           
           return (
