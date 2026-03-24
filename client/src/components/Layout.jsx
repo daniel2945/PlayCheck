@@ -26,8 +26,14 @@ export default function Layout() {
           <span className="text-white">eck</span>
         </Link>
 
+<<<<<<< HEAD
         {/* קישורים */}
         <div className="flex gap-6 text-[#e8eaed] items-center font-medium">
+=======
+        {/* קישורים מרכזיים ופעולות משתמש */}
+        <div className="flex gap-6 text-[#e8eaed] items-center font-medium">
+          {/* הקישורים תמיד משמאל לימין לפי הסטנדרט */}
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
           <Link to="/" className="hover:text-[#8ab4f8] transition-colors">
             Home
           </Link>
@@ -38,12 +44,15 @@ export default function Layout() {
             Setup PC
           </Link>
 
+<<<<<<< HEAD
           {token && (
             <Link to="/profile" className="hover:text-[#8ab4f8] transition-colors">
               Profile
             </Link>
           )}
 
+=======
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
           {user?.isAdmin && (
             <Link to="/admin" className="text-[#EA4335] hover:text-[#f28b82] transition-colors font-bold px-2 py-1 bg-[#EA4335]/10 rounded-md">
               Admin Panel
@@ -56,6 +65,24 @@ export default function Layout() {
             </Link>
           ) : (
             <div className="flex items-center gap-4 border-l border-[#334155] pl-4 ml-2">
+<<<<<<< HEAD
+=======
+              
+              {/* ✨ אייקון פרופיל משתמש מעוצב ✨ */}
+              <Link 
+                to="/profile" 
+                title="My Profile"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-[#1e293b] border border-[#334155] hover:border-[#8ab4f8] hover:bg-[#334155] transition-all group"
+              >
+                <svg className="w-5 h-5 text-[#94a3b8] group-hover:text-[#8ab4f8] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </Link>
+
+              <Link to="/settings" className="hover:text-[#8ab4f8] transition-colors font-medium text-[#94a3b8]">
+                Settings
+              </Link>
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
               <button
                 onClick={handleLogout}
                 className="hover:text-[#f28b82] transition-colors font-medium text-[#94a3b8]"
@@ -79,7 +106,10 @@ export default function Layout() {
             &copy; 2026 <span className="text-[#e8eaed] font-bold tracking-wide">PlayCheck</span>. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-[#94a3b8]">
+<<<<<<< HEAD
             {/* הפכנו אותם לקישורים אמיתיים! */}
+=======
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
             <Link to="/terms" className="hover:text-[#e8eaed] transition-colors">Terms of Service</Link>
             <Link to="/privacy" className="hover:text-[#e8eaed] transition-colors">Privacy Policy</Link>
           </div>

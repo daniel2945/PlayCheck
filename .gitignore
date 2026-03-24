@@ -1,5 +1,9 @@
 node_modules/
 .env
+<<<<<<< HEAD
 server/node_modules/
 server/.env
 client/.env
+=======
+*.local
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542

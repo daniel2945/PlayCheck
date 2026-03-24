@@ -347,6 +347,11 @@ const changeRole = async (req, res, next) => {
 };
 
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 module.exports = {
   register,
   login,
@@ -360,5 +365,9 @@ module.exports = {
   changeName,
   changePassword,
   changeMyPassword,
+<<<<<<< HEAD
   changeRole
+=======
+  changeRole,
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 };

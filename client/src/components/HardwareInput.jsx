@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
+<<<<<<< HEAD
 import API_CALL from "../api/API_CALL"; // הפונקציה המרכזית שלך
+=======
+import API_CALL from "../api/API_CALL";
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 
 export default function HardwareInput({ type, placeholder, onSelect }) {
   const [query, setQuery] = useState("");
@@ -7,6 +11,7 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   const [results, setResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
+<<<<<<< HEAD
   // === מנגנון ה-Debounce והקריאה לשרת ===
   useEffect(() => {
     if (query.length < 2) {
@@ -14,12 +19,29 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
     }
 
     // מגדירים טיימר. הבקשה תישלח רק אם עברו 300 אלפיות שנייה בלי הקלדה
+=======
+  // ✨ פונקציית עזר חכמה שמונעת כפילות כמו "Intel Intel Core..." ✨
+  const formatHardwareName = (brand, model) => {
+    if (!brand) return model;
+    if (!model) return brand;
+    return model.toLowerCase().startsWith(brand.toLowerCase()) 
+      ? model 
+      : `${brand} ${model}`;
+  };
+
+  useEffect(() => {
+    if (query.length < 2) return;
+
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
     const delayDebounceFn = setTimeout(async () => {
       try {
         const data = await API_CALL(
           `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`
         );
+<<<<<<< HEAD
 
+=======
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
         if (data.success) {
           setResults(data.data);
         } else {
@@ -31,6 +53,7 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
       }
     }, 300);
 
+<<<<<<< HEAD
     // פונקציית ניקוי: אם המשתמש הקליד עוד אות לפני שעברו ה-300ms, הטיימר הקודם מבוטל
     return () => clearTimeout(delayDebounceFn);
   }, [query, type]); // הפונקציה תרוץ מחדש בכל פעם שהטקסט בחיפוש משתנה
@@ -42,6 +65,15 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
     if (newQuery.length < 2) {
       setResults([]);
     }
+=======
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, type]);
+
+  const handleChange = (e) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    if (newQuery.length < 2) setResults([]);
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
     setIsOpen(true);
   };
 
@@ -53,7 +85,8 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
           <div className="flex items-center gap-3">
             <span className="text-[#9aa0a6] text-sm font-medium">{type}:</span>
             <span className="text-[#e8eaed] text-lg">
-              {selectedItem.brand} {selectedItem.model}
+              {/* ✨ שימוש בפונקציה החכמה ✨ */}
+              {formatHardwareName(selectedItem.brand, selectedItem.model)}
             </span>
           </div>
           <button
@@ -102,7 +135,8 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
                 }}
                 className="px-6 py-2.5 hover:bg-[#3c4043] cursor-pointer text-[#e8eaed] transition-colors"
               >
-                {item.brand} {item.model}
+                {/* ✨ שימוש בפונקציה החכמה ✨ */}
+                {formatHardwareName(item.brand, item.model)}
               </div>
             ))}
           </div>
