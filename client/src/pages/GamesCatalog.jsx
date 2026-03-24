@@ -1,142 +1,141 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import API_CALL from "../api/API_CALL";
 import GameCard from "../components/GameCard";
 
-export default function GamesCatalog({ setView, setSelectedGameId }) {
+export default function GamesCatalog() {
+  const navigate = useNavigate();
+  
+  // הסטייט של הטופס
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+
+  // הסטייט ה"נעול" - קריטי כדי ש'טען עוד' יזכור מה אנחנו מסננים
+  const [activeQuery, setActiveQuery] = useState("");
+  const [activeYear, setActiveYear] = useState("");
+
   const [games, setGames] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // טעינה ראשונית של משחקים כשהעמוד עולה (כדי שלא יהיה מסך ריק)
-  useEffect(() => {
-    const fetchDefaultGames = async () => {
-      setLoading(true);
-      try {
-        // שים לב: שינינו ל-game (יחיד)
-        const res = await fetch(
-          "http://localhost:3000/api/game/search?q=popular",
-        );
-        const data = await res.json();
-        if (data.success) {
-          setGames(data.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch default games:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDefaultGames();
-  }, []);
-
-  // פונקציית החיפוש כשלוחצים על הכפתור
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
+  const fetchGames = async (pageNum = 1, queryToUse = "", yearToUse = "", isLoadMore = false) => {
     setLoading(true);
     setError("");
-    setGames([]);
-
     try {
-      // שים לב: שינינו ל-game (יחיד)
-      const res = await fetch(
-        `http://localhost:3000/api/game/search?q=${encodeURIComponent(
-          searchQuery,
-        )}`,
-      );
+      // לא שולחים "popular" יותר! 
+      const params = new URLSearchParams({
+        page: pageNum,
+      });
 
-      const contentType = res.headers.get("content-type");
-      if (
-        !res.ok &&
-        (!contentType || !contentType.includes("application/json"))
-      ) {
-        throw new Error("API route not found or server error");
+      // מוסיפים q רק אם באמת הקלדת טקסט
+      if (queryToUse && queryToUse.trim() !== "") {
+        params.append("q", queryToUse);
       }
 
-      const data = await res.json();
+      if (yearToUse) {
+        params.append("year", yearToUse);
+      }
 
-      if (data.success) {
-        setGames(data.data);
+      const endpoint = `/api/game/search?${params.toString()}`;
+      const data = await API_CALL(endpoint);
+
+      if (data.success && Array.isArray(data.data)) {
+        if (isLoadMore) {
+          setGames((prev) => [...prev, ...data.data]);
+        } else {
+          setGames(data.data);
+        }
+        
+        // השרת שלך כבר מחזיר hasNextPage מוכן! משתמשים בו ישירות
+        setHasNextPage(data.hasNextPage);
+        setPage(pageNum);
+        setActiveQuery(queryToUse);
+        setActiveYear(yearToUse);
       } else {
-        setError(data.message || "Failed to fetch games");
+        if (!isLoadMore) setGames([]);
+        setHasNextPage(false);
       }
     } catch (err) {
-      console.error("Search error:", err);
-      setError(
-        "A network error occurred while searching. Is the backend running?",
-      );
+      setError("Failed to load games. Try again later.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGameClick = (game) => {
-    const gameId = game.rawgId || game._id;
-    console.log("Selected game ID:", gameId);
-    // Updates App.jsx state so the Result component knows what to fetch
-    setSelectedGameId(gameId);
-    setView("result");
+  useEffect(() => {
+    fetchGames(1, "", "", false);
+  }, []);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchGames(1, searchQuery, selectedYear, false);
   };
+
+  const handleLoadMore = () => {
+    fetchGames(page + 1, activeQuery, activeYear, true);
+  };
+
+  const handleGameClick = (game) => {
+    navigate(`/details/${game.rawgId || game._id}`);
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 37 }, (_, i) => currentYear - i);
 
   return (
     <div className="pt-24 px-6 max-w-7xl mx-auto min-h-screen flex flex-col items-center">
-      <h2 className="text-3xl text-[#e8eaed] mb-8 font-medium">
-        Search Games Catalog
-      </h2>
+      <h2 className="text-3xl text-[#e8eaed] mb-8 font-medium">Search Games Catalog</h2>
 
-      {/* Search Form */}
-      <form
-        onSubmit={handleSearch}
-        className="w-full max-w-2xl flex items-center gap-3 mb-12"
-      >
+      <form onSubmit={handleSearchSubmit} className="w-full max-w-3xl flex flex-col md:flex-row items-center gap-3 mb-12">
         <input
           type="text"
-          placeholder="Search for a game (e.g. Grand Theft Auto)..."
+          placeholder="Search for a game..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 p-4 rounded-full bg-[#303134] text-[#e8eaed] border border-[#5f6368] focus:outline-none focus:border-[#8ab4f8] transition-colors text-lg shadow-sm"
+          className="flex-1 w-full p-4 rounded-full bg-[#303134] text-[#e8eaed] border border-[#5f6368] focus:outline-none focus:border-[#8ab4f8] text-lg"
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-8 py-4 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] rounded-full font-bold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+          className="p-4 rounded-full bg-[#303134] text-[#e8eaed] border border-[#5f6368] cursor-pointer outline-none"
         >
-          {loading ? "Searching..." : "Search"}
+          <option value="">All Years</option>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <button type="submit" className="px-8 py-4 bg-[#8ab4f8] text-[#202124] rounded-full font-bold hover:bg-[#aecbfa] transition-colors">
+          Search
         </button>
       </form>
 
-      {/* Error Message */}
-      {error && (
-        <div className="text-[#EA4335] bg-[#303134] border border-[#EA4335] px-6 py-3 rounded-lg mb-8 font-medium">
-          {error}
-        </div>
-      )}
-
-      {/* Results Grid */}
+      {/* גריד המשחקים */}
       <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-12">
-        {games.map((game, index) => {
-          const gameId = game.rawgId || game._id || index;
-          const title = game.name || game.title;
+        {games.map((game) => {
+          // ✨ התיקון הקריטי: קוראים לזה releaseDate בדיוק כמו בשרת שלך!
+          const releasedYear = game.releasedDate ? game.releasedDate.substring(0, 4) : "TBA";
+          
           return (
-            <div
-              key={gameId}
-              onClick={() => handleGameClick(game)}
-              className="cursor-pointer"
-            >
-              <GameCard title={title} imageUrl={game.image} setView={setView} />
+            <div key={game.rawgId} onClick={() => handleGameClick(game)} className="cursor-pointer transition-transform hover:scale-105 h-full">
+              <GameCard title={game.name} imageUrl={game.image} year={releasedYear} />
             </div>
           );
         })}
       </div>
 
-      {/* Empty State */}
-      {!loading && !error && games.length === 0 && searchQuery && (
-        <div className="text-[#9aa0a6] text-lg">
-          No games found. Try a different search term.
-        </div>
+      {/* כפתור טעינה נוספת */}
+      {hasNextPage && !loading && games.length > 0 && (
+        <button
+          onClick={handleLoadMore}
+          className="mb-12 px-10 py-3 border border-[#8ab4f8] text-[#8ab4f8] hover:bg-[#8ab4f8] hover:text-[#202124] rounded-full font-bold transition-all"
+        >
+          Show More Results
+        </button>
       )}
+
+      {loading && <p className="text-[#9aa0a6] mb-12 text-lg animate-pulse">Loading games...</p>}
+      {!loading && games.length === 0 && !error && <p className="text-[#9aa0a6]">No games found for your search.</p>}
+      {error && <p className="text-[#EA4335]">{error}</p>}
     </div>
   );
 }

@@ -1,42 +1,27 @@
 const User = require("../models/User");
 
-const getProfile = async (req, res, next) => {
-  try {
-    // Find user and populate the hardware references to get their brand/model details
-    const user = await User.findById(req.user.id)
-      .populate("my_pc.cpuId")
-      .populate("my_pc.gpuId")
-      .select("-password");
-
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-
-    res.status(200).json({ success: true, data: user });
-  } catch (error) {
-    console.error("Error fetching profile:", error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
-};
-
 const updateSpecs = async (req, res, next) => {
   try {
-    const { cpuId, gpuId, ram_gb } = req.body;
+    // Correctly expect cpuId, gpuId, and ramGb from the body
+    const { cpuId, gpuId, ramGb } = req.body;
+
+    // Validate that all required fields are present
+    if (!cpuId || !gpuId || !ramGb) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields: cpuId, gpuId, ramGb" });
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
-      req.user?.id || req.userId,
+      // Only use req.user.id, which is reliably set by the verifyToken middleware
+      req.user.id,
       {
-        myPc: { cpuId, gpuId, ramGb: ram_gb },
-        my_pc: {
-          cpuId,
-          gpuId,
-          ram_gb,
-        },
+        // Update only the 'myPc' object, which is defined in the schema
+        myPc: { cpuId, gpuId, ramGb },
       },
       { new: true, runValidators: true },
     )
+      // Correctly populate the fields within the 'myPc' object
       .populate("myPc.cpuId")
       .populate("myPc.gpuId");
 
@@ -53,8 +38,8 @@ const updateSpecs = async (req, res, next) => {
     });
   } catch (error) {
     console.error("SPECS UPDATE ERROR:", error);
-    return res.status(500).json({ error: error.message });
+    next(error);
   }
 };
 
-module.exports = { getProfile, updateSpecs };
+module.exports = { updateSpecs };

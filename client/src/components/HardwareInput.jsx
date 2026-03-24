@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import API_CALL from "../api/API_CALL"; // הפונקציה המרכזית שלך
 
 export default function HardwareInput({ type, placeholder, onSelect }) {
   const [query, setQuery] = useState("");
@@ -6,17 +7,18 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   const [results, setResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  const handleChange = async (e) => {
-    const value = e.target.value;
-    setQuery(value);
-    setIsOpen(true);
+  // === מנגנון ה-Debounce והקריאה לשרת ===
+  useEffect(() => {
+    if (query.length < 2) {
+      return;
+    }
 
-    if (value.length >= 2) {
+    // מגדירים טיימר. הבקשה תישלח רק אם עברו 300 אלפיות שנייה בלי הקלדה
+    const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `http://localhost:3000/api/hardware/search?q=${encodeURIComponent(value)}&type=${encodeURIComponent(type)}&limit=10`,
+        const data = await API_CALL(
+          `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`
         );
-        const data = await res.json();
 
         if (data.success) {
           setResults(data.data);
@@ -27,11 +29,23 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
         console.error("Failed to fetch hardware:", err);
         setResults([]);
       }
-    } else {
+    }, 300);
+
+    // פונקציית ניקוי: אם המשתמש הקליד עוד אות לפני שעברו ה-300ms, הטיימר הקודם מבוטל
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, type]); // הפונקציה תרוץ מחדש בכל פעם שהטקסט בחיפוש משתנה
+
+  // הפונקציה הזו עכשיו רק מעדכנת את הטקסט, היא לא פונה לשרת!
+  const handleChange = (e) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    if (newQuery.length < 2) {
       setResults([]);
     }
+    setIsOpen(true);
   };
 
+  // === ה-UI נשאר כמעט ללא שינוי, הוא כתוב מצוין ===
   if (selectedItem) {
     return (
       <div className="relative w-full">
@@ -51,18 +65,8 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
             className="text-[#9aa0a6] hover:text-[#e8eaed] transition-colors p-1"
             title="Clear selection"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              ></path>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
         </div>
@@ -86,7 +90,7 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
       </div>
 
       {isOpen && results.length > 0 && (
-        <div className="absolute w-full bg-[#303134] mt-2 rounded-2xl shadow-2xl z-50 border border-[#5f6368] overflow-hidden">
+        <div className="absolute w-full bg-[#303134] mt-2 rounded-2xl shadow-2xl z-50 border border-[#5f6368] overflow-hidden max-h-60 overflow-y-auto">
           <div className="py-2">
             {results.map((item) => (
               <div

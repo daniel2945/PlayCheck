@@ -21,6 +21,11 @@ const gameSchema = new mongoose.Schema({
     required: true,
     default: "there is no description for this game",
   },
+  releasedDate: {
+    type: String,
+    required: true,
+    default: "TBA",
+  },
   requirements: {
     minimum: {
       cpuScore: {

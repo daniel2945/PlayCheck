@@ -1,135 +1,100 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AdminDashboard from "./pages/AdminDashboard";
+
+// ייבוא ה-Store של Zustand
+import useAuthStore from "./store/useAuthStore";
+
+// ייבוא הקומפוננטות
+import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
-import MyComputer from "./pages/PcSetup";
+import PcSetup from "./pages/PcSetup";
 import GamesCatalog from "./pages/GamesCatalog";
 import Result from "./pages/Result";
 import Profile from "./pages/Profile";
-import Navbar from "./components/Navbar";
+import GameDetails from "./pages/GameDetails"; 
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";// למעלה בייבואים
+
 import "./index.css";
 
+// שומר הראש של עמוד המנהל
+const AdminRoute = ({ children }) => {
+  const { user, token } = useAuthStore();
+
+  // אם אין טוקן או שהמשתמש אינו מנהל, זרוק אותו לדף הבית
+  if (!token || !user?.isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
 function App() {
-  const [view, setView] = useState("home");
-  const [token, setToken] = useState(localStorage.getItem("token") || null);
-  const [user, setUser] = useState(null);
-  // State successfully initialized for the comparison flow
-  const [selectedGameId, setSelectedGameId] = useState(null);
+  // שליפת הנתונים והפונקציות מה-Store
+  const { token, checkAuth } = useAuthStore();
 
+  // בדיקת אימות אחת בלבד כשהאפליקציה עולה
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-
-    if (storedToken) {
-      setToken(storedToken);
-      // Safely switch away from home/login on refresh if the user is authenticated
-      setView((prevView) =>
-        prevView === "home" || prevView === "login" ? "profile" : prevView,
-      );
-    }
-
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
-        console.error("Failed to parse user data from localStorage:", err);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (token) {
-      fetch("http://localhost:3000/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => {
-          // Only log the user out if the server explicitly rejects the token
-          if (res.status === 401 || res.status === 403) {
-            setToken(null);
-            setUser(null);
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            localStorage.removeItem("guestSpecs");
-            throw new Error("Unauthorized or Token Expired");
-          }
-          const contentType = res.headers.get("content-type");
-          if (
-            !res.ok &&
-            (!contentType || !contentType.includes("application/json"))
-          ) {
-            throw new Error("API route not found");
-          }
-          return res.json();
-        })
-        .then((data) => {
-          if (data && data.success) {
-            setUser((prev) => {
-              const updatedUser = { ...prev, ...data.data };
-              localStorage.setItem("user", JSON.stringify(updatedUser));
-              return updatedUser;
-            });
-          } else if (data && !data.success) {
-            console.error(
-              "Backend returned error during token validation (Token NOT deleted):",
-              data,
-            );
-          }
-        })
-        .catch((err) => {
-          console.error("Network/API error during token validation:", err);
-        });
-    } else {
-      setUser(null);
-    }
-  }, [token]);
-
-  const renderView = () => {
-    switch (view) {
-      case "home":
-        return <Home setView={setView} />;
-      case "login":
-      case "register":
-        return (
-          <Auth
-            view={view}
-            setView={setView}
-            setToken={setToken}
-            setUser={setUser}
-          />
-        );
-      case "pc-setup":
-        return <MyComputer setView={setView} token={token} setUser={setUser} />;
-      case "games":
-        return (
-          <GamesCatalog
-            setView={setView}
-            setSelectedGameId={setSelectedGameId}
-          />
-        );
-      case "result":
-        return (
-          <Result
-            setView={setView}
-            selectedGameId={selectedGameId}
-            token={token}
-          />
-        );
-      case "profile":
-        return <Profile setView={setView} token={token} user={user} />;
-      default:
-        return <Home setView={setView} />;
-    }
-  };
+    checkAuth();
+  }, [checkAuth]);
 
   return (
-    <div className="min-h-screen bg-[#202124] text-white font-sans">
-      <Navbar
-        setView={setView}
-        token={token}
-        setToken={setToken}
-        setUser={setUser}
-      />
-      {renderView()}
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-[#202124] text-white font-sans">
+        <Routes>
+          {/* ה-Layout עוטף את כל הדפים ומכיל את ה-Navbar */}
+          <Route path="/" element={<Layout />}>
+            {/* דף הבית */}
+            <Route index element={<Home />} />
+
+            {/* דף התחברות - אם יש טוקן, הוא "מחליף" (replace) את הדף לפרופיל */}
+            <Route
+              path="login"
+              element={!token ? <Auth /> : <Navigate to="/profile" replace />}
+            />
+
+            {/* הגדרת מפרט מחשב */}
+            <Route path="setup" element={<PcSetup />} />
+
+            {/* קטלוג משחקים - עכשיו עובד עם Pagination */}
+            <Route path="catalog" element={<GamesCatalog />} />
+
+            {/* תוצאות בדיקת תאימות */}
+            <Route path="game/:gameId" element={<Result />} />
+
+            {/* דף פרופיל אישי - מוגן: אם אין טוקן, נשלח ללוגין */}
+            <Route
+              path="profile"
+              element={token ? <Profile /> : <Navigate to="/login" replace />}
+            />
+            <Route path="/details/:gameId" element={<GameDetails />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+
+            {/* דף 404 לכל כתובת לא מוכרת */}
+            <Route
+              path="*"
+              element={
+                <div className="text-center pt-32 text-2xl text-[#9aa0a6]">
+                  404 - Page Not Found
+                </div>
+              }
+            />
+            {/* עמוד מנהל - מוגן על ידי AdminRoute */}
+            <Route
+              path="admin"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+          </Route>
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 

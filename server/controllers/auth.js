@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const register = async (req, res, next) => {
   try {
@@ -91,6 +93,60 @@ const login = async (req, res, next) => {
   }
 };
 
+const googleLogin = async (req, res, next) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ success: false, data: "Google credential missing" });
+    }
+
+    // Verify the Google JWT token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, sub } = payload;
+
+    let user = await User.findOne({ email })
+      .populate("myPc.cpuId")
+      .populate("myPc.gpuId");
+
+    // If the user doesn't exist, create an account automatically
+    if (!user) {
+      const randomPassword = await bcrypt.hash(sub + process.env.JWT_SECRET, 10);
+      const newUser = new User({
+        userName: name,
+        email,
+        password: randomPassword,
+        myPc: {
+          cpuId: "000000000000000000000000",
+          gpuId: "000000000000000000000000",
+          ramGb: 16,
+        },
+      });
+      await newUser.save();
+      user = newUser;
+    }
+
+    // Generate our app's standard JWT token
+    const token = jwt.sign(
+      { id: user._id, userName: user.userName, email: user.email, isAdmin: user.isAdmin },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    res.status(200).json({ success: true, token, user: userResponse });
+  } catch (err) {
+    console.error("[GOOGLE LOGIN SERVER ERROR]", err);
+    next(err);
+  }
+};
+
 const changeMyPassword = async (req, res, next) => {
   try {
     const { password } = req.body;
@@ -111,9 +167,7 @@ const getUser = async (req, res, next) => {
     const user = await User.findById(req.user.id)
       .select("-password")
       .populate("myPc.cpuId")
-      .populate("myPc.gpuId")
-      .populate("my_pc.cpuId")
-      .populate("my_pc.gpuId");
+      .populate("myPc.gpuId");
     if (!user) {
       return res.status(404).json({ success: false, data: "user not found" });
     }
@@ -279,9 +333,24 @@ const changeMyEmail = async (req, res, next) => {
   }
 };
 
+const changeRole = async (req, res, next) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { isAdmin: req.body.isAdmin }, // מעדכן רק את שדה הניהול
+      { new: true }
+    );
+    res.status(200).json({ success: true, data: updatedUser });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 module.exports = {
   register,
   login,
+  googleLogin,
   deleteUser,
   getAllUsers,
   getUser,
@@ -291,4 +360,5 @@ module.exports = {
   changeName,
   changePassword,
   changeMyPassword,
+  changeRole
 };

@@ -7,6 +7,7 @@ const authRouter = require("./routes/auth");
 const hardwareRouter = require("./routes/hardware");
 const userRouter = require("./routes/users");
 const gameRouter = require("./routes/game");
+const { initializeHardwareCache } = require("./controllers/game");
 
 
 const app = express();
@@ -28,5 +29,9 @@ app.listen(PORT, () => {
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
+  .then(() => {
+    console.log("✅ Connected to MongoDB");
+    // Initialize hardware cache after successful DB connection
+    initializeHardwareCache();
+  })
   .catch((err) => console.error("❌ MongoDB connection error:", err));

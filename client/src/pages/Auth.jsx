@@ -1,82 +1,70 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import API_CALL from "../api/API_CALL";
+import useAuthStore from "../store/useAuthStore";
+import { GoogleLogin } from "@react-oauth/google";
 
-export default function Auth({ view, setView, setToken, setUser }) {
+export default function Auth() {
+  const navigate = useNavigate();
+  const { setAuth } = useAuthStore();
+
+  const [isLoginView, setIsLoginView] = useState(true);
   const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState(""); // שדה חדש
   const [userName, setUserName] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ text: "", type: "" });
+
+    // בדיקת התאמת סיסמאות בצד הלקוח (Client-side validation)
+    if (!isLoginView && password !== confirmPassword) {
+      return setMessage({ text: "Passwords do not match!", type: "error" });
+    }
+
     try {
-      const endpoint =
-        view === "login" ? "/api/auth/login" : "/api/auth/register";
-      const payload =
-        view === "login"
-          ? { email, password }
-          : {
-              email,
-              password,
-              userName,
-              myPc: {
-                // Passing fallback 24-char ObjectIds if guest specs don't exist to prevent 400 error
-                cpuId:
-                  JSON.parse(localStorage.getItem("guestSpecs"))?.cpu?._id ||
-                  "000000000000000000000000",
-                gpuId:
-                  JSON.parse(localStorage.getItem("guestSpecs"))?.gpu?._id ||
-                  "000000000000000000000000",
-                ramGb:
-                  JSON.parse(localStorage.getItem("guestSpecs"))?.ram || 16,
-              },
-            };
+      const endpoint = isLoginView ? "/api/auth/login" : "/api/auth/register";
+      let payload = { email, password };
 
-      const res = await fetch(`http://localhost:3000${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const contentType = res.headers.get("content-type");
-      if (
-        !res.ok &&
-        (!contentType || !contentType.includes("application/json"))
-      ) {
-        throw new Error(`API route not found or server error (${res.status})`);
+      if (!isLoginView) {
+        const guestSpecs = JSON.parse(localStorage.getItem("guestSpecs")) || {};
+        payload = {
+          ...payload,
+          userName,
+          myPc: {
+            cpuId: guestSpecs.cpu?._id || "000000000000000000000000",
+            gpuId: guestSpecs.gpu?._id || "000000000000000000000000",
+            ramGb: guestSpecs.ram || 16,
+          },
+        };
       }
 
-      const data = await res.json();
+      const data = await API_CALL(endpoint, "POST", payload);
 
-      if (data.success) {
-        if (view === "register") {
-          setMessage({
-            text: "Registration successful! Please login.",
-            type: "success",
-          });
-          setTimeout(() => setView("login"), 2000);
-        } else {
-          if (data.token) {
-            localStorage.setItem("token", data.token);
-            setToken(data.token);
-          }
-          if (data.user) {
-            localStorage.setItem("user", JSON.stringify(data.user));
-            if (setUser) setUser(data.user);
-          }
-          // Proactively wipe any stale guest specs to enforce DB as the single source of truth
-          localStorage.removeItem("guestSpecs");
-          setView("profile");
-        }
-      } else {
+      if (!isLoginView) {
         setMessage({
-          text: data.data || data.message || "Authentication failed",
-          type: "error",
+          text: "Registration successful! Please login.",
+          type: "success",
         });
+        setTimeout(() => {
+          setIsLoginView(true);
+          setConfirmPassword(""); // איפוס השדה
+        }, 2000);
+      } else {
+        if (data.token && data.user) {
+          setAuth(data.user, data.token);
+          localStorage.removeItem("guestSpecs");
+          navigate("/profile");
+        }
       }
     } catch (err) {
-      setMessage({ text: "Network Error", type: "error" });
+      setMessage({
+        text: err.message || "Authentication failed",
+        type: "error",
+      });
     }
   };
 
@@ -84,22 +72,23 @@ export default function Auth({ view, setView, setToken, setUser }) {
     <div className="flex flex-col items-center justify-center p-6 text-center pt-24">
       <div className="bg-[#303134] p-8 rounded-xl shadow-xl border border-[#5f6368] w-full max-w-sm">
         <h2 className="text-2xl font-medium mb-6 text-[#e8eaed]">
-          {view === "login"
-            ? isAdminLogin
-              ? "Admin Login"
-              : "Login"
-            : "Register"}
+          {isLoginView ? (isAdminLogin ? "Admin Login" : "Login") : "Register"}
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {message.text && (
             <div
-              className={`p-3 rounded-lg text-sm font-medium border ${message.type === "error" ? "bg-[#303134] text-[#EA4335] border-[#EA4335]" : "bg-[#303134] text-[#34A853] border-[#34A853]"}`}
+              className={`p-3 rounded-lg text-sm font-medium border ${
+                message.type === "error"
+                  ? "text-[#EA4335] border-[#EA4335]"
+                  : "text-[#34A853] border-[#34A853]"
+              }`}
             >
               {message.text}
             </div>
           )}
-          {view === "register" && (
+
+          {!isLoginView && (
             <input
               type="text"
               placeholder="Username"
@@ -125,32 +114,73 @@ export default function Auth({ view, setView, setToken, setUser }) {
             onChange={(e) => setPassword(e.target.value)}
             className="p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] focus:outline-none focus:border-[#8ab4f8]"
           />
+
+          {/* שדה אימות סיסמה - מופיע רק בהרשמה */}
+          {!isLoginView && (
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] focus:outline-none focus:border-[#8ab4f8]"
+            />
+          )}
+
           <button
             type="submit"
             className="mt-2 p-3 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] rounded-lg font-bold text-lg transition-colors"
           >
-            {view === "login" ? "Sign In" : "Sign Up"}
+            {isLoginView ? "Sign In" : "Sign Up"}
           </button>
         </form>
 
-        <div className="mt-6 flex flex-col gap-3 text-sm">
+        <div className="mt-6 mb-2 flex items-center justify-between">
+          <hr className="w-full border-[#5f6368]" />
+          <span className="p-2 text-[#9aa0a6] text-xs uppercase">Or</span>
+          <hr className="w-full border-[#5f6368]" />
+        </div>
+
+        <div className="flex justify-center mb-4">
+          <GoogleLogin
+           
+            onSuccess={async (credentialResponse) => {
+              try {
+                const data = await API_CALL("/api/auth/google", "POST", {
+                  credential: credentialResponse.credential,
+                });
+
+                if (data.token && data.user) {
+                  setAuth(data.user, data.token);
+                  localStorage.removeItem("guestSpecs");
+                  navigate("/profile");
+                }
+              } catch (err) {
+                console.error("Google Login Server Error:", err);
+                setMessage({
+                  text: err.message || "Google Login failed",
+                  type: "error",
+                });
+              }
+            }}
+            onError={() => {
+              console.log("Google Login Failed");
+            }}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 text-sm">
           <p
             className="cursor-pointer text-[#9aa0a6] hover:text-[#e8eaed] transition-colors"
-            onClick={() => setView(view === "login" ? "register" : "login")}
+            onClick={() => {
+              setIsLoginView(!isLoginView);
+              setMessage({ text: "", type: "" }); // איפוס הודעות במעבר
+            }}
           >
-            {view === "login"
+            {isLoginView
               ? "Don't have an account? Register"
               : "Already have an account? Login"}
           </p>
-
-          {view === "login" && (
-            <p
-              className="cursor-pointer text-[#8ab4f8] hover:text-[#aecbfa] transition-colors"
-              onClick={() => setIsAdminLogin(!isAdminLogin)}
-            >
-              {isAdminLogin ? "User Login" : "Admin Login"}
-            </p>
-          )}
         </div>
       </div>
     </div>

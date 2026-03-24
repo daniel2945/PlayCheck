@@ -3,6 +3,7 @@ const authRouter = express.Router();
 const {
   register,
   login,
+  googleLogin,
   deleteUser,
   getAllUsers,
   getUser,
@@ -12,12 +13,14 @@ const {
   changeName,
   changePassword,
   changeMyPassword,
+  changeRole,
 } = require("../controllers/auth");
 const { verifyToken, forAdmins } = require("../middlewares/auth");
 
 // --- נתיבי התחברות והרשמה ---
 authRouter.post("/register", register);
 authRouter.post("/login", login);
+authRouter.post("/google", googleLogin);
 
 // --- נתיבי משתמש מחובר (דורש טוקן) ---
 // כל נתיב שמתחיל ב /me יעבור קודם בדיקת טוקן
@@ -39,5 +42,7 @@ authRouter.route("/:id/email").put(verifyToken, forAdmins, changeEmail);
 authRouter.route("/:id/name").put(verifyToken, forAdmins, changeName);
 
 authRouter.route("/:id/password").put(verifyToken, forAdmins, changePassword);
+
+authRouter.route("/:id/role").put(verifyToken, forAdmins, changeRole);
 
 module.exports = authRouter;

@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom"; 
+import API_CALL from "../api/API_CALL"; 
+import useAuthStore from "../store/useAuthStore";
 
-export default function Result({ setView, selectedGameId, token }) {
+export default function Result() {
+  const { gameId } = useParams(); 
+  const navigate = useNavigate();
+  const { token } = useAuthStore();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Bounce back if accessed directly without selecting a game
-    if (!selectedGameId) {
-      setView("games");
+    if (!gameId) {
+      navigate("/catalog");
       return;
     }
 
@@ -17,60 +22,39 @@ export default function Result({ setView, selectedGameId, token }) {
       setError("");
 
       try {
-        let res;
+        let result;
+        
         if (token) {
-          // AUTHENTICATED USER FLOW
-          res = await fetch(
-            `http://localhost:3000/api/game/user/check/${selectedGameId}`,
-            {
-              method: "GET",
-              headers: { Authorization: `Bearer ${token}` },
-            },
-          );
+          result = await API_CALL(`/api/game/user/check/${gameId}`);
         } else {
-          // GUEST FLOW
           const guestSpecs = JSON.parse(localStorage.getItem("guestSpecs"));
           if (!guestSpecs || !guestSpecs.cpu?._id || !guestSpecs.gpu?._id) {
             setError("No valid PC specs found. Please set up your PC first.");
             setLoading(false);
             return;
           }
-          res = await fetch(
-            `http://localhost:3000/api/game/guest/check/${selectedGameId}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                myPc: {
-                  cpuId: guestSpecs.cpu._id,
-                  gpuId: guestSpecs.gpu._id,
-                  ramGb: guestSpecs.ram || 16,
-                },
-              }),
+          
+          result = await API_CALL(`/api/game/guest/check/${gameId}`, "POST", {
+            myPc: {
+              cpuId: guestSpecs.cpu._id,
+              gpuId: guestSpecs.gpu._id,
+              ramGb: guestSpecs.ram || 16,
             },
-          );
+          });
         }
 
-        const result = await res.json();
-        if (result.success) {
-          setData(result.data);
-        } else {
-          setError(
-            result.data || result.message || "Failed to fetch compatibility.",
-          );
-        }
+        setData(result.data);
+        
       } catch (err) {
         console.error("Analysis Error:", err);
-        setError(
-          "A network error occurred. Please check if the server is running.",
-        );
+        setError(err.message || "A network error occurred. Please check if the server is running.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchCompatibility();
-  }, [selectedGameId, token, setView]);
+  }, [gameId, token, navigate]); 
 
   if (loading) {
     return (
@@ -88,7 +72,7 @@ export default function Result({ setView, selectedGameId, token }) {
           <p className="text-lg font-medium">{error}</p>
         </div>
         <button
-          onClick={() => setView("pc-setup")}
+          onClick={() => navigate("/setup")}
           className="px-8 py-3 bg-[#8ab4f8] text-[#202124] hover:bg-[#aecbfa] rounded-full font-bold transition-colors"
         >
           Setup PC Specs
@@ -99,20 +83,15 @@ export default function Result({ setView, selectedGameId, token }) {
 
   if (!data) return null;
 
-  // Style Mappers based on backend grades ("optimal", "okay", "weak")
   const getOverallStyle = (grade) => {
-    if (grade === "optimal")
-      return { percent: 100, color: "#34A853", text: "You Can Run It!" };
-    if (grade === "okay")
-      return { percent: 85, color: "#34A853", text: "You Can Run It!" };
-    if (grade === "weak")
-      return { percent: 30, color: "#EA4335", text: "Does Not Meet Minimum" };
+    if (grade === "optimal") return { percent: 100, color: "#34A853", text: "You Can Run It!" };
+    if (grade === "okay") return { percent: 85, color: "#34A853", text: "You Can Run It!" };
+    if (grade === "weak") return { percent: 30, color: "#EA4335", text: "Does Not Meet Minimum" };
     return { percent: 0, color: "#9aa0a6", text: "Unknown" };
   };
 
   const getComponentStyle = (grade) => {
-    if (grade === "optimal")
-      return { color: "#34A853", text: "Meets Requirements" };
+    if (grade === "optimal") return { color: "#34A853", text: "Meets Requirements" };
     if (grade === "okay") return { color: "#FBBC05", text: "Minimum Specs" };
     if (grade === "weak") return { color: "#EA4335", text: "Does Not Meet" };
     return { color: "#9aa0a6", text: "Unknown" };
@@ -120,11 +99,9 @@ export default function Result({ setView, selectedGameId, token }) {
 
   const overall = getOverallStyle(data.overall);
 
-  // SVG Gauge Calculations
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset =
-    circumference - (overall.percent / 100) * circumference;
+  const strokeDashoffset = circumference - (overall.percent / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center pt-24 px-4 min-h-screen pb-12">
@@ -137,14 +114,7 @@ export default function Result({ setView, selectedGameId, token }) {
       <div className="relative flex flex-col items-center mb-16">
         <div className="relative w-64 h-64 flex items-center justify-center">
           <svg className="absolute top-0 left-0 w-full h-full transform -rotate-90 drop-shadow-xl">
-            <circle
-              cx="128"
-              cy="128"
-              r={radius}
-              stroke="#303134"
-              strokeWidth="16"
-              fill="transparent"
-            />
+            <circle cx="128" cy="128" r={radius} stroke="#303134" strokeWidth="16" fill="transparent" />
             <circle
               cx="128"
               cy="128"
@@ -159,10 +129,7 @@ export default function Result({ setView, selectedGameId, token }) {
             />
           </svg>
           <div className="text-center z-10 flex flex-col items-center mt-2">
-            <span
-              className="text-6xl font-bold"
-              style={{ color: overall.color }}
-            >
+            <span className="text-6xl font-bold" style={{ color: overall.color }}>
               {overall.percent}%
             </span>
             <p className="text-[#e8eaed] mt-3 font-medium text-lg tracking-wide">
@@ -178,39 +145,27 @@ export default function Result({ setView, selectedGameId, token }) {
           Your Specs vs Required
         </h3>
         <div className="flex flex-col gap-6">
+          
           {/* CPU Row */}
           <div className="flex flex-col bg-[#202124] p-5 rounded-xl border border-[#3c4043] shadow-inner gap-4">
             <div className="flex justify-between items-center border-b border-[#3c4043] pb-3">
               <span className="text-xl text-[#e8eaed] font-bold">CPU</span>
-              <span
-                className="text-lg font-bold"
-                style={{ color: getComponentStyle(data.components.cpu).color }}
-              >
+              <span className="text-lg font-bold" style={{ color: getComponentStyle(data.components.cpu).color }}>
                 {getComponentStyle(data.components.cpu).text}
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="flex flex-col">
-                <span className="text-[#9aa0a6] mb-1 font-medium">
-                  Your CPU
-                </span>
-                <span className="text-[#8ab4f8] font-semibold">
-                  {data.specsDetails?.cpu?.user || "N/A"}
-                </span>
+                <span className="text-[#9aa0a6] mb-1 font-medium">Your CPU</span>
+                <span className="text-[#8ab4f8] font-semibold">{data.specsDetails?.cpu?.user || "N/A"}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[#9aa0a6] mb-1 font-medium">Minimum</span>
-                <span className="text-[#e8eaed]">
-                  {data.specsDetails?.cpu?.min || "N/A"}
-                </span>
+                <span className="text-[#e8eaed]">{data.specsDetails?.cpu?.min || "N/A"}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[#9aa0a6] mb-1 font-medium">
-                  Recommended
-                </span>
-                <span className="text-[#e8eaed]">
-                  {data.specsDetails?.cpu?.rec || "N/A"}
-                </span>
+                <span className="text-[#9aa0a6] mb-1 font-medium">Recommended</span>
+                <span className="text-[#e8eaed]">{data.specsDetails?.cpu?.rec || "N/A"}</span>
               </div>
             </div>
           </div>
@@ -219,35 +174,22 @@ export default function Result({ setView, selectedGameId, token }) {
           <div className="flex flex-col bg-[#202124] p-5 rounded-xl border border-[#3c4043] shadow-inner gap-4">
             <div className="flex justify-between items-center border-b border-[#3c4043] pb-3">
               <span className="text-xl text-[#e8eaed] font-bold">GPU</span>
-              <span
-                className="text-lg font-bold"
-                style={{ color: getComponentStyle(data.components.gpu).color }}
-              >
+              <span className="text-lg font-bold" style={{ color: getComponentStyle(data.components.gpu).color }}>
                 {getComponentStyle(data.components.gpu).text}
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="flex flex-col">
-                <span className="text-[#9aa0a6] mb-1 font-medium">
-                  Your GPU
-                </span>
-                <span className="text-[#8ab4f8] font-semibold">
-                  {data.specsDetails?.gpu?.user || "N/A"}
-                </span>
+                <span className="text-[#9aa0a6] mb-1 font-medium">Your GPU</span>
+                <span className="text-[#8ab4f8] font-semibold">{data.specsDetails?.gpu?.user || "N/A"}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[#9aa0a6] mb-1 font-medium">Minimum</span>
-                <span className="text-[#e8eaed]">
-                  {data.specsDetails?.gpu?.min || "N/A"}
-                </span>
+                <span className="text-[#e8eaed]">{data.specsDetails?.gpu?.min || "N/A"}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[#9aa0a6] mb-1 font-medium">
-                  Recommended
-                </span>
-                <span className="text-[#e8eaed]">
-                  {data.specsDetails?.gpu?.rec || "N/A"}
-                </span>
+                <span className="text-[#9aa0a6] mb-1 font-medium">Recommended</span>
+                <span className="text-[#e8eaed]">{data.specsDetails?.gpu?.rec || "N/A"}</span>
               </div>
             </div>
           </div>
@@ -256,51 +198,49 @@ export default function Result({ setView, selectedGameId, token }) {
           <div className="flex flex-col bg-[#202124] p-5 rounded-xl border border-[#3c4043] shadow-inner gap-4">
             <div className="flex justify-between items-center border-b border-[#3c4043] pb-3">
               <span className="text-xl text-[#e8eaed] font-bold">RAM</span>
-              <span
-                className="text-lg font-bold"
-                style={{ color: getComponentStyle(data.components.ram).color }}
-              >
+              <span className="text-lg font-bold" style={{ color: getComponentStyle(data.components.ram).color }}>
                 {getComponentStyle(data.components.ram).text}
               </span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="flex flex-col">
-                <span className="text-[#9aa0a6] mb-1 font-medium">
-                  Your RAM
-                </span>
-                <span className="text-[#8ab4f8] font-semibold">
-                  {data.specsDetails?.ram?.user || "N/A"}
-                </span>
+                <span className="text-[#9aa0a6] mb-1 font-medium">Your RAM</span>
+                <span className="text-[#8ab4f8] font-semibold">{data.specsDetails?.ram?.user || "N/A"}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[#9aa0a6] mb-1 font-medium">Minimum</span>
-                <span className="text-[#e8eaed]">
-                  {data.specsDetails?.ram?.min || "N/A"}
-                </span>
+                <span className="text-[#e8eaed]">{data.specsDetails?.ram?.min || "N/A"}</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[#9aa0a6] mb-1 font-medium">
-                  Recommended
-                </span>
-                <span className="text-[#e8eaed]">
-                  {data.specsDetails?.ram?.rec || "N/A"}
-                </span>
+                <span className="text-[#9aa0a6] mb-1 font-medium">Recommended</span>
+                <span className="text-[#e8eaed]">{data.specsDetails?.ram?.rec || "N/A"}</span>
               </div>
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="mt-12 flex flex-col sm:flex-row gap-6">
+      {/* Action Buttons - כאן התווסף הכפתור השלישי */}
+      <div className="mt-12 flex flex-col sm:flex-row flex-wrap justify-center gap-4 w-full max-w-4xl">
+        
+        {/* כפתור למעבר לעמוד המשחק המלא */}
         <button
-          onClick={() => setView("games")}
+          onClick={() => navigate(`/details/${gameId}`)}
+          className="px-8 py-3 border border-[#8ab4f8] text-[#8ab4f8] hover:bg-[#8ab4f8] hover:text-[#202124] rounded-full font-bold transition-all"
+        >
+          View Full Game Details
+        </button>
+
+        <button
+          onClick={() => navigate("/catalog")}
           className="px-8 py-3 border border-[#5f6368] text-[#e8eaed] hover:bg-[#3c4043] rounded-full font-medium transition-colors"
         >
           Check Another Game
         </button>
+        
         <button
-          onClick={() => setView("pc-setup")}
+          onClick={() => navigate("/setup")}
           className="px-8 py-3 bg-[#8ab4f8] text-[#202124] hover:bg-[#aecbfa] rounded-full font-bold transition-colors"
         >
           Change Specs
