@@ -19,21 +19,32 @@ export default function AdminDashboard() {
   const [isGameModalOpen, setIsGameModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingGame, setIsEditingGame] = useState(false);
+
+  // סטייטים לחיפושים
+  const [gameSearchQuery, setGameSearchQuery] = useState("");
+  const [hardwareSearchQuery, setHardwareSearchQuery] = useState("");
+  
+  // עימוד חומרה
+  const [hardwarePage, setHardwarePage] = useState(1);
+  const hardwareItemsPerPage = 10;
 
   // טופס חומרה
   const [hardwareForm, setHardwareForm] = useState({ type: "CPU", brand: "", model: "", benchmarkScore: 0 });
   
-  // טופס משחקים - מותאם ב-100% לסכמה (כולל דרישות מערכת!)
-  const [gameForm, setGameForm] = useState({ 
+  // טופס משחקים - כולל releasedDate
+  const defaultGameForm = { 
     _id: "", 
     title: "", 
     description: "", 
     image: "",
+    releasedDate: "TBA",
     requirements: {
       minimum: { cpuScore: 0, gpuScore: 0, ramGb: 0, cpuText: "", gpuText: "" },
       recommended: { cpuScore: 0, gpuScore: 0, ramGb: 0, cpuText: "", gpuText: "" }
     }
-  });
+  };
+  const [gameForm, setGameForm] = useState(defaultGameForm);
   
   // טופס משתמשים (כולל סיסמה)
   const [userForm, setUserForm] = useState({ 
@@ -92,7 +103,6 @@ export default function AdminDashboard() {
       await API_CALL(`/api/auth/${userForm._id}/email`, "PUT", { email: userForm.email });
       await API_CALL(`/api/auth/${userForm._id}/role`, "PUT", { isAdmin: userForm.isAdmin });
       
-      // עדכון סיסמה רק אם השדה לא ריק
       if (userForm.newPassword && userForm.newPassword.trim() !== "") {
         await API_CALL(`/api/auth/${userForm._id}/password`, "PUT", { password: userForm.newPassword });
       }
@@ -113,41 +123,55 @@ export default function AdminDashboard() {
     } catch (err) { alert("Error: " + err.message); }
   };
 
-  const openGameModal = (game) => {
-    setGameForm({ 
-      _id: game._id, 
-      title: game.title || "", 
-      description: game.description || "there is no description for this game",
-      image: game.image || "https://placehold.co/600x400/1a1a1a/ffffff?text=No+Image+Available",
-      requirements: {
-        minimum: {
-          cpuScore: game.requirements?.minimum?.cpuScore || 0,
-          gpuScore: game.requirements?.minimum?.gpuScore || 0,
-          ramGb: game.requirements?.minimum?.ramGb || 0,
-          cpuText: game.requirements?.minimum?.cpuText || "",
-          gpuText: game.requirements?.minimum?.gpuText || ""
-        },
-        recommended: {
-          cpuScore: game.requirements?.recommended?.cpuScore || 0,
-          gpuScore: game.requirements?.recommended?.gpuScore || 0,
-          ramGb: game.requirements?.recommended?.ramGb || 0,
-          cpuText: game.requirements?.recommended?.cpuText || "",
-          gpuText: game.requirements?.recommended?.gpuText || ""
+  const openGameModal = (game = null) => {
+    if (game) {
+      setIsEditingGame(true);
+      setGameForm({ 
+        _id: game._id, 
+        title: game.title || "", 
+        description: game.description || "there is no description for this game",
+        image: game.image || "https://placehold.co/600x400/1a1a1a/ffffff?text=No+Image+Available",
+        releasedDate: game.releasedDate || "TBA",
+        requirements: {
+          minimum: {
+            cpuScore: game.requirements?.minimum?.cpuScore || 0,
+            gpuScore: game.requirements?.minimum?.gpuScore || 0,
+            ramGb: game.requirements?.minimum?.ramGb || 0,
+            cpuText: game.requirements?.minimum?.cpuText || "",
+            gpuText: game.requirements?.minimum?.gpuText || ""
+          },
+          recommended: {
+            cpuScore: game.requirements?.recommended?.cpuScore || 0,
+            gpuScore: game.requirements?.recommended?.gpuScore || 0,
+            ramGb: game.requirements?.recommended?.ramGb || 0,
+            cpuText: game.requirements?.recommended?.cpuText || "",
+            gpuText: game.requirements?.recommended?.gpuText || ""
+          }
         }
-      }
-    });
+      });
+    } else {
+      setIsEditingGame(false);
+      setGameForm({ ...defaultGameForm, _id: Date.now() });
+    }
     setIsGameModalOpen(true);
   };
 
   const handleSaveGame = async (e) => {
     e.preventDefault();
     try {
-      const data = await API_CALL(`/api/game/${gameForm._id}`, "PUT", gameForm);
-      if (data.success) {
-        setGames(games.map((g) => (g._id === gameForm._id ? { ...g, ...gameForm } : g)));
-        setIsGameModalOpen(false);
+      if (isEditingGame) {
+        const data = await API_CALL(`/api/game/${gameForm._id}`, "PUT", gameForm);
+        if (data.success) {
+          setGames(games.map((g) => (g._id === gameForm._id ? { ...g, ...gameForm } : g)));
+        }
+      } else {
+        const data = await API_CALL(`/api/game/${gameForm._id}`, "POST", gameForm);
+        if (data.success) {
+          setGames([data.data || { ...gameForm }, ...games]);
+        }
       }
-    } catch (err) { alert("Failed to update game: " + err.message); }
+      setIsGameModalOpen(false);
+    } catch (err) { alert("Failed to save game: " + err.message); }
   };
 
   // ==========================================
@@ -183,6 +207,13 @@ export default function AdminDashboard() {
       setIsHardwareModalOpen(false);
     } catch (err) { alert("Failed to save hardware: " + err.message); }
   };
+
+  // סינונים לחיפוש
+  const filteredGames = games.filter(g => g.title?.toLowerCase().includes(gameSearchQuery.toLowerCase()));
+  const filteredHardwares = hardwares.filter(h => 
+    h.model?.toLowerCase().includes(hardwareSearchQuery.toLowerCase()) || 
+    h.brand?.toLowerCase().includes(hardwareSearchQuery.toLowerCase())
+  );
 
   return (
     <div className="pt-24 px-6 max-w-7xl mx-auto min-h-screen relative pb-10">
@@ -237,37 +268,52 @@ export default function AdminDashboard() {
           טאב משחקים
       ============================================== */}
       {!loading && activeTab === "games" && (
-        <div className="bg-[#303134] rounded-xl border border-[#5f6368] overflow-hidden overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-[#202124] text-[#9aa0a6] border-b border-[#5f6368]">
-              <tr>
-                <th className="p-4">Image</th>
-                <th className="p-4">Game Title</th>
-                <th className="p-4">Description</th>
-                <th className="p-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {games.map((g) => (
-                <tr key={g._id} className="border-b border-[#5f6368] hover:bg-[#3c4043]">
-                  <td className="p-4">
-                    {g.image ? (
-                      <img src={g.image} alt={g.title} className="w-16 h-10 object-cover rounded" />
-                    ) : (
-                      <div className="w-16 h-10 bg-[#202124] rounded border border-[#5f6368]"></div>
-                    )}
-                  </td>
-                  <td className="p-4 text-[#e8eaed] font-medium">{g.title}</td>
-                  <td className="p-4 text-[#9aa0a6] text-sm max-w-xs truncate">{g.description}</td>
-                  <td className="p-4 flex gap-4 items-center h-full mt-2">
-                    <button onClick={() => openGameModal(g)} className="text-[#8ab4f8] hover:underline">Edit</button>
-                    <button onClick={() => handleDeleteGame(g._id, g.title)} className="text-[#EA4335] hover:underline">Delete</button>
-                  </td>
+        <div>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <button onClick={() => openGameModal()} className="bg-[#34A853] hover:bg-[#2d9047] text-[#202124] px-6 py-2 rounded-lg font-bold transition-colors whitespace-nowrap">
+              + Add New Game
+            </button>
+            <input
+              type="text"
+              placeholder="Search game title..."
+              value={gameSearchQuery}
+              onChange={(e) => setGameSearchQuery(e.target.value)}
+              className="flex-1 p-2 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]"
+            />
+          </div>
+          
+          <div className="bg-[#303134] rounded-xl border border-[#5f6368] overflow-hidden overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-[#202124] text-[#9aa0a6] border-b border-[#5f6368]">
+                <tr>
+                  <th className="p-4">Image</th>
+                  <th className="p-4">Game Title</th>
+                  <th className="p-4">Description</th>
+                  <th className="p-4">Actions</th>
                 </tr>
-              ))}
-              {games.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-[#9aa0a6]">No games found.</td></tr>}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredGames.map((g) => (
+                  <tr key={g._id} className="border-b border-[#5f6368] hover:bg-[#3c4043]">
+                    <td className="p-4">
+                      {g.image ? (
+                        <img src={g.image} alt={g.title} className="w-16 h-10 object-cover rounded" />
+                      ) : (
+                        <div className="w-16 h-10 bg-[#202124] rounded border border-[#5f6368]"></div>
+                      )}
+                    </td>
+                    <td className="p-4 text-[#e8eaed] font-medium">{g.title}</td>
+                    <td className="p-4 text-[#9aa0a6] text-sm max-w-xs truncate">{g.description}</td>
+                    <td className="p-4 flex gap-4 items-center h-full mt-2">
+                      <button onClick={() => openGameModal(g)} className="text-[#8ab4f8] hover:underline">Edit</button>
+                      <button onClick={() => handleDeleteGame(g._id, g.title)} className="text-[#EA4335] hover:underline">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+                {filteredGames.length === 0 && <tr><td colSpan="4" className="p-8 text-center text-[#9aa0a6]">No games found matching your search.</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -276,16 +322,44 @@ export default function AdminDashboard() {
       ============================================== */}
       {!loading && activeTab === "hardware" && (
         <div>
-          <button onClick={() => openHardwareModal()} className="mb-6 bg-[#34A853] hover:bg-[#2d9047] text-[#202124] px-6 py-2 rounded-lg font-bold transition-colors">
-            + Add New Hardware
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <button onClick={() => openHardwareModal()} className="bg-[#34A853] hover:bg-[#2d9047] text-[#202124] px-6 py-2 rounded-lg font-bold transition-colors whitespace-nowrap">
+              + Add New Hardware
+            </button>
+            <input
+              type="text"
+              list="hardware-suggestions"
+              placeholder="Search hardware by brand or model..."
+              value={hardwareSearchQuery}
+              onChange={(e) => {
+                setHardwareSearchQuery(e.target.value);
+                setHardwarePage(1); // איפוס עמוד בחיפוש
+              }}
+              className="flex-1 p-2 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]"
+            />
+            {/* HTML Datalist לאוטוקומפליט */}
+            <datalist id="hardware-suggestions">
+              {hardwares.map(h => {
+                // בדיקה: האם המודל כבר מכיל את המותג בהתחלה?
+                const displayName = h.model.toLowerCase().startsWith(h.brand.toLowerCase()) 
+                  ? h.model 
+                  : `${h.brand} ${h.model}`;
+                  
+                return <option key={h._id} value={displayName} />;
+              })}
+            </datalist>
+          </div>
+
           <div className="bg-[#303134] rounded-xl border border-[#5f6368] overflow-hidden overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-[#202124] text-[#9aa0a6] border-b border-[#5f6368]">
                 <tr><th className="p-4">Type</th><th className="p-4">Brand</th><th className="p-4">Model</th><th className="p-4">Score</th><th className="p-4">Actions</th></tr>
               </thead>
               <tbody>
-                {hardwares.map((h) => (
+                {/* עימוד החומרה */}
+                {filteredHardwares
+                  .slice((hardwarePage - 1) * hardwareItemsPerPage, hardwarePage * hardwareItemsPerPage)
+                  .map((h) => (
                   <tr key={h._id} className="border-b border-[#5f6368] hover:bg-[#3c4043]">
                     <td className="p-4 font-bold text-[#8ab4f8]">{h.type}</td>
                     <td className="p-4 text-[#e8eaed]">{h.brand}</td>
@@ -297,8 +371,32 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
+                {filteredHardwares.length === 0 && <tr><td colSpan="5" className="p-8 text-center text-[#9aa0a6]">No hardware found matching your search.</td></tr>}
               </tbody>
             </table>
+            
+            {/* סרגל ניווט עמודים לחומרה */}
+            {filteredHardwares.length > hardwareItemsPerPage && (
+              <div className="flex items-center justify-between p-4 bg-[#202124] border-t border-[#5f6368]">
+                <button
+                  onClick={() => setHardwarePage(prev => Math.max(prev - 1, 1))}
+                  disabled={hardwarePage === 1}
+                  className="px-4 py-2 bg-[#303134] text-[#e8eaed] rounded-lg disabled:opacity-50 hover:bg-[#3c4043] transition-colors"
+                >
+                  Previous
+                </button>
+                <span className="text-[#9aa0a6] font-medium">
+                  Page {hardwarePage} of {Math.ceil(filteredHardwares.length / hardwareItemsPerPage)}
+                </span>
+                <button
+                  onClick={() => setHardwarePage(prev => Math.min(prev + 1, Math.ceil(filteredHardwares.length / hardwareItemsPerPage)))}
+                  disabled={hardwarePage === Math.ceil(filteredHardwares.length / hardwareItemsPerPage)}
+                  className="px-4 py-2 bg-[#303134] text-[#e8eaed] rounded-lg disabled:opacity-50 hover:bg-[#3c4043] transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -340,23 +438,39 @@ export default function AdminDashboard() {
       {isGameModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-[#202124] p-6 rounded-xl border border-[#5f6368] w-full max-w-4xl shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl text-[#e8eaed] mb-6 font-bold">Edit Game & Requirements</h2>
+            <h2 className="text-2xl text-[#e8eaed] mb-6 font-bold">{isEditingGame ? "Edit Game & Requirements" : "Add New Game"}</h2>
             
             <form onSubmit={handleSaveGame} className="flex flex-col gap-6">
               
               {/* פרטים כלליים */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* הצגת שדה ID רק אם זה משחק חדש */}
+                {!isEditingGame && (
+                  <div className="flex flex-col gap-2 md:col-span-2">
+                    <label className="text-[#8ab4f8] font-bold">Game ID (Number)</label>
+                    <input type="number" required value={gameForm._id} onChange={(e) => setGameForm({ ...gameForm, _id: Number(e.target.value) })} className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]" />
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-2">
                   <label className="text-[#8ab4f8] font-bold">Game Title</label>
-                  <input type="text" required value={gameForm.title} onChange={(e) => setGameForm({ ...gameForm, title: e.target.value })} className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none" />
+                  <input type="text" required value={gameForm.title} onChange={(e) => setGameForm({ ...gameForm, title: e.target.value })} className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]" />
                 </div>
+                
                 <div className="flex flex-col gap-2">
                   <label className="text-[#8ab4f8] font-bold">Image URL</label>
-                  <input type="text" required value={gameForm.image} onChange={(e) => setGameForm({ ...gameForm, image: e.target.value })} className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none" />
+                  <input type="text" required value={gameForm.image} onChange={(e) => setGameForm({ ...gameForm, image: e.target.value })} className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]" />
                 </div>
+
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="text-[#8ab4f8] font-bold">Release Date</label>
+                  <input type="text" required value={gameForm.releasedDate} onChange={(e) => setGameForm({ ...gameForm, releasedDate: e.target.value })} placeholder="e.g. 2024-05-12 or TBA" className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]" />
+                </div>
+
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-[#8ab4f8] font-bold">Description</label>
-                  <textarea rows="2" required value={gameForm.description} onChange={(e) => setGameForm({ ...gameForm, description: e.target.value })} className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none resize-none" />
+                  <textarea rows="2" required value={gameForm.description} onChange={(e) => setGameForm({ ...gameForm, description: e.target.value })} className="p-2 rounded bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none resize-none focus:border-[#8ab4f8]" />
                 </div>
               </div>
 
@@ -370,19 +484,19 @@ export default function AdminDashboard() {
                   <h3 className="text-lg text-[#f28b82] font-bold">Minimum Requirements</h3>
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">CPU Score</label>
-                  <input type="number" required value={gameForm.requirements.minimum.cpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, cpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="number" required value={gameForm.requirements.minimum.cpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, cpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">GPU Score</label>
-                  <input type="number" required value={gameForm.requirements.minimum.gpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, gpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="number" required value={gameForm.requirements.minimum.gpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, gpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">RAM (GB)</label>
-                  <input type="number" required value={gameForm.requirements.minimum.ramGb} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, ramGb: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="number" required value={gameForm.requirements.minimum.ramGb} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, ramGb: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">CPU Text (Display)</label>
-                  <input type="text" required value={gameForm.requirements.minimum.cpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, cpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="text" required value={gameForm.requirements.minimum.cpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, cpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">GPU Text (Display)</label>
-                  <input type="text" required value={gameForm.requirements.minimum.gpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, gpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="text" required value={gameForm.requirements.minimum.gpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, minimum: { ...gameForm.requirements.minimum, gpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                 </div>
 
                 {/* מומלץ */}
@@ -390,19 +504,19 @@ export default function AdminDashboard() {
                   <h3 className="text-lg text-[#81c995] font-bold">Recommended Requirements</h3>
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">CPU Score</label>
-                  <input type="number" required value={gameForm.requirements.recommended.cpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, cpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="number" required value={gameForm.requirements.recommended.cpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, cpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">GPU Score</label>
-                  <input type="number" required value={gameForm.requirements.recommended.gpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, gpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="number" required value={gameForm.requirements.recommended.gpuScore} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, gpuScore: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">RAM (GB)</label>
-                  <input type="number" required value={gameForm.requirements.recommended.ramGb} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, ramGb: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="number" required value={gameForm.requirements.recommended.ramGb} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, ramGb: Number(e.target.value) } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">CPU Text (Display)</label>
-                  <input type="text" required value={gameForm.requirements.recommended.cpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, cpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="text" required value={gameForm.requirements.recommended.cpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, cpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                   
                   <label className="text-[#9aa0a6] text-xs mb-[-8px]">GPU Text (Display)</label>
-                  <input type="text" required value={gameForm.requirements.recommended.gpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, gpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368]" />
+                  <input type="text" required value={gameForm.requirements.recommended.gpuText} onChange={(e) => setGameForm({ ...gameForm, requirements: { ...gameForm.requirements, recommended: { ...gameForm.requirements.recommended, gpuText: e.target.value } } })} className="p-2 rounded bg-[#202124] text-[#e8eaed] outline-none border border-[#5f6368] focus:border-[#8ab4f8]" />
                 </div>
               </div>
 

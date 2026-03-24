@@ -454,7 +454,7 @@ const checkCompatibilityUser = async (req, res, next) => {
   try {
     const gameId = req.params.id;
     const currentUser = await User.findById(req.user.id);
-    console.log("DEBUG - User found:", JSON.stringify(currentUser, null, 2)); // זה ידפיס לנו בדיוק מה חוזר מה-DB
+    console.log("DEBUG - User found:", JSON.stringify(currentUser, null, 2));
 
     if (!currentUser || !currentUser.myPc) {
       return res.status(400).json({
@@ -512,6 +512,24 @@ const checkCompatibilityUser = async (req, res, next) => {
     const grades = [cpuGrade, gpuGrade, ramGrade];
     if (grades.includes("weak")) overallGrade = "weak";
     else if (grades.includes("okay")) overallGrade = "okay";
+
+
+    
+    currentUser.searchHistory = currentUser.searchHistory.filter(
+      (item) => item.gameId.toString() !== gameId.toString()
+    );
+
+    currentUser.searchHistory.unshift({ 
+      gameId: game._id, 
+      searchedAt: Date.now() 
+    });
+
+    if (currentUser.searchHistory.length > 10) {
+      currentUser.searchHistory = currentUser.searchHistory.slice(0, 10);
+    }
+
+    await currentUser.save();
+    
 
     res.status(200).json({
       success: true,

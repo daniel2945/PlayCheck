@@ -291,6 +291,8 @@ const changeRole = async (req, res, next) => {
 };
 
 
+
+
 module.exports = {
   register,
   login,
@@ -303,5 +305,5 @@ module.exports = {
   changeName,
   changePassword,
   changeMyPassword,
-  changeRole
+  changeRole,
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import API_CALL from "../api/API_CALL"; // הפונקציה המרכזית שלך
+import API_CALL from "../api/API_CALL";
 
 export default function HardwareInput({ type, placeholder, onSelect }) {
   const [query, setQuery] = useState("");
@@ -7,19 +7,23 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   const [results, setResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // === מנגנון ה-Debounce והקריאה לשרת ===
-  useEffect(() => {
-    if (query.length < 2) {
-      return;
-    }
+  // ✨ פונקציית עזר חכמה שמונעת כפילות כמו "Intel Intel Core..." ✨
+  const formatHardwareName = (brand, model) => {
+    if (!brand) return model;
+    if (!model) return brand;
+    return model.toLowerCase().startsWith(brand.toLowerCase()) 
+      ? model 
+      : `${brand} ${model}`;
+  };
 
-    // מגדירים טיימר. הבקשה תישלח רק אם עברו 300 אלפיות שנייה בלי הקלדה
+  useEffect(() => {
+    if (query.length < 2) return;
+
     const delayDebounceFn = setTimeout(async () => {
       try {
         const data = await API_CALL(
           `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`
         );
-
         if (data.success) {
           setResults(data.data);
         } else {
@@ -31,21 +35,16 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
       }
     }, 300);
 
-    // פונקציית ניקוי: אם המשתמש הקליד עוד אות לפני שעברו ה-300ms, הטיימר הקודם מבוטל
     return () => clearTimeout(delayDebounceFn);
-  }, [query, type]); // הפונקציה תרוץ מחדש בכל פעם שהטקסט בחיפוש משתנה
+  }, [query, type]);
 
-  // הפונקציה הזו עכשיו רק מעדכנת את הטקסט, היא לא פונה לשרת!
   const handleChange = (e) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    if (newQuery.length < 2) {
-      setResults([]);
-    }
+    if (newQuery.length < 2) setResults([]);
     setIsOpen(true);
   };
 
-  // === ה-UI נשאר כמעט ללא שינוי, הוא כתוב מצוין ===
   if (selectedItem) {
     return (
       <div className="relative w-full">
@@ -53,7 +52,8 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
           <div className="flex items-center gap-3">
             <span className="text-[#9aa0a6] text-sm font-medium">{type}:</span>
             <span className="text-[#e8eaed] text-lg">
-              {selectedItem.brand} {selectedItem.model}
+              {/* ✨ שימוש בפונקציה החכמה ✨ */}
+              {formatHardwareName(selectedItem.brand, selectedItem.model)}
             </span>
           </div>
           <button
@@ -102,7 +102,8 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
                 }}
                 className="px-6 py-2.5 hover:bg-[#3c4043] cursor-pointer text-[#e8eaed] transition-colors"
               >
-                {item.brand} {item.model}
+                {/* ✨ שימוש בפונקציה החכמה ✨ */}
+                {formatHardwareName(item.brand, item.model)}
               </div>
             ))}
           </div>

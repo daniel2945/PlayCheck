@@ -12,7 +12,7 @@ const {
   changeName,
   changePassword,
   changeMyPassword,
-  changeRole
+  changeRole,
 } = require("../controllers/auth");
 const { verifyToken, forAdmins } = require("../middlewares/auth");
 
