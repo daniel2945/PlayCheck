@@ -5,6 +5,38 @@ const { parseGameRequirements } = require("../utils/hardwareParser");
 const User = require("../models/User");
 const Hardware = require("../models/Hardware");
 
+// --- Hardware Cache ---
+// יצירת אובייקט שיחזיק את רשימות החומרה בזיכרון
+const hardwareCache = {
+  cpuList: [],
+  gpuList: [],
+  isInitialized: false,
+};
+
+// פונקציה שתאכלס את המטמון מה-DB
+const initializeHardwareCache = async () => {
+  if (hardwareCache.isInitialized) return;
+
+  try {
+    console.log("Initializing hardware cache...");
+    const [cpus, gpus] = await Promise.all([
+      Hardware.find({ type: "CPU" }).lean(),
+      Hardware.find({ type: "GPU" }).lean(),
+    ]);
+    hardwareCache.cpuList = cpus;
+    hardwareCache.gpuList = gpus;
+    hardwareCache.isInitialized = true;
+    console.log(
+      `✅ Hardware cache initialized successfully. (${cpus.length} CPUs, ${gpus.length} GPUs)`,
+    );
+  } catch (error) {
+    console.error("❌ Failed to initialize hardware cache:", error);
+    // במקרה של כישלון, ננסה שוב בעוד 10 שניות
+    setTimeout(initializeHardwareCache, 10000);
+  }
+};
+// --- End of Hardware Cache ---
+
 // Utility to extract raw hardware strings from RAWG API requirement texts
 const extractHardwareText = (text, type) => {
   if (!text || typeof text !== "string") return "Not specified by developer";
@@ -36,79 +68,59 @@ const formatRam = (ramGb) => {
 
 const searchGames = async (req, res, next) => {
   try {
-    const searchQuery = req.query.q;
-    if (!searchQuery) {
-      return res
-        .status(400)
-        .json({ success: false, message: "there is no query" });
+    const { q, year, page } = req.query; // שליפה מסודרת
+
+    // לוג לבדיקה - תסתכל בטרמינל של השרת כשאתה לוחץ Show More
+    console.log(`[SEARCH DEBUG] Query: ${q}, Year: ${year}, Page: ${page}`);
+
+    const params = {
+      key: apiKey,
+      page: page || 1,
+      page_size: 12,
+    };
+
+    // אם המשתמש הקליד משהו בחיפוש - נחפש אותו
+    if (q && q.trim() !== "" && q !== "popular") {
+      params.search = q;
+    } else {
+      // אם אין מילת חיפוש (קריאה רגילה של הקטלוג או רק סינון שנה)
+      // נבקש מ-RAWG למיין את התוצאות לפי כמות הוספות (פופולריות אמיתית)
+      params.ordering = "-added";
     }
+
+    if (year) params.dates = `${year}-01-01,${year}-12-31`;
+
     const response = await axios.get("https://api.rawg.io/api/games", {
-      params: {
-        key: apiKey,
-        search: searchQuery,
-        page_size: 10,
-      },
+      params,
     });
+    // לוג לבדיקה - האם RAWG אומר שיש עוד עמוד?
+    console.log(`[RAWG DEBUG] Has Next: ${!!response.data.next}`);
+
     const games = response.data.results.map((game) => ({
       rawgId: game.id,
       name: game.name,
       image: game.background_image,
-      releaseDate: game.released,
+      releasedDate: game.released,
     }));
-    res.status(200).json({ success: true, data: games });
-  } catch (err) {
-    // Deep log the exact error from Axios or Network
-    console.error(
-      "[RAWG API ERROR in searchGames]:",
-      err.response?.data || err.message,
-    );
-    return res.status(500).json({
-      success: false,
-      message: "RAWG error: " + (err.response?.data?.error || err.message),
+
+    res.status(200).json({
+      success: true,
+      data: games,
+      hasNextPage: !!response.data.next,
     });
+  } catch (err) {
+    console.error("[RAWG API ERROR]:", err.message);
+    next(err);
   }
 };
 
 const searchGame = async (req, res, next) => {
   try {
     const id = req.params.id;
-    if (!id) {
-      return res.status(400).json({ success: false, data: "game not found" });
-    }
-
-    const existingGame = await Game.findById(id);
-    if (existingGame) {
-      return res
-        .status(200)
-        .json({ success: true, data: existingGame, fromLocal: true });
-    }
-
-    const response = await axios.get(`https://api.rawg.io/api/games/${id}`, {
-      params: {
-        key: apiKey,
-      },
-    });
-    const gameData = response.data;
-    const pcPlatform = gameData.platforms.find(
-      (p) => p.platform.name.toLowerCase() === "pc",
-    );
-
-    const pcRequirements =
-      pcPlatform && pcPlatform.requirements
-        ? pcPlatform.requirements
-        : { minimum: null, recommended: null };
-
-    const game = {
-      _id: id,
-      title: gameData.name,
-      image: gameData.background_image,
-      description: gameData.description,
-      requirements: {
-        minimum: pcRequirements.minimum,
-        recommended: pcRequirements.recommended,
-      },
-    };
-    res.status(200).json({ success: true, data: game, fromLocal: false });
+    if (!id) return res.status(400).json({ success: false, data: "game not found" });
+    const game = await getOrFetchGame(id);
+    
+    res.status(200).json({ success: true, data: game });
   } catch (err) {
     next(err);
   }
@@ -116,9 +128,7 @@ const searchGame = async (req, res, next) => {
 
 const createGame = async (req, res, next) => {
   try {
-    const { _id, title, image, description, requirements } = req.body;
-    const cpuList = await Hardware.find({ type: "CPU" });
-    const gpuList = await Hardware.find({ type: "GPU" });
+const { _id, title, image, description, releasedDate, requirements } = req.body;    const { cpuList, gpuList } = hardwareCache;
     const minimum = await parseGameRequirements(
       requirements.minimum,
       cpuList,
@@ -155,6 +165,7 @@ const createGame = async (req, res, next) => {
       title,
       image,
       description,
+      releasedDate,
       requirements: {
         minimum: {
           cpuScore: minimum.cpuScore,
@@ -292,8 +303,7 @@ const getOrFetchGame = async (gameId) => {
       ? pcPlatform.requirements
       : { minimum: null, recommended: null };
 
-  const cpuList = await Hardware.find({ type: "CPU" });
-  const gpuList = await Hardware.find({ type: "GPU" });
+  const { cpuList, gpuList } = hardwareCache;
 
   const minimum = await parseGameRequirements(
     pcRequirements.minimum,
@@ -332,6 +342,7 @@ const getOrFetchGame = async (gameId) => {
     title: gameData.name,
     image: gameData.background_image,
     description: gameData.description,
+    releasedDate: gameData.released,
     requirements: {
       minimum: {
         cpuScore: minimum.cpuScore,
@@ -543,4 +554,5 @@ module.exports = {
   checkCompatibilityGuest,
   checkCompatibilityUser,
   clearAllGames,
+  initializeHardwareCache,
 };

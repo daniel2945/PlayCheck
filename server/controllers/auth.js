@@ -111,9 +111,7 @@ const getUser = async (req, res, next) => {
     const user = await User.findById(req.user.id)
       .select("-password")
       .populate("myPc.cpuId")
-      .populate("myPc.gpuId")
-      .populate("my_pc.cpuId")
-      .populate("my_pc.gpuId");
+      .populate("myPc.gpuId");
     if (!user) {
       return res.status(404).json({ success: false, data: "user not found" });
     }
@@ -279,6 +277,20 @@ const changeMyEmail = async (req, res, next) => {
   }
 };
 
+const changeRole = async (req, res, next) => {
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { isAdmin: req.body.isAdmin }, // מעדכן רק את שדה הניהול
+      { new: true }
+    );
+    res.status(200).json({ success: true, data: updatedUser });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 module.exports = {
   register,
   login,
@@ -291,4 +303,5 @@ module.exports = {
   changeName,
   changePassword,
   changeMyPassword,
+  changeRole
 };

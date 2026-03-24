@@ -12,6 +12,7 @@ const {
   changeName,
   changePassword,
   changeMyPassword,
+  changeRole
 } = require("../controllers/auth");
 const { verifyToken, forAdmins } = require("../middlewares/auth");
 
@@ -39,5 +40,7 @@ authRouter.route("/:id/email").put(verifyToken, forAdmins, changeEmail);
 authRouter.route("/:id/name").put(verifyToken, forAdmins, changeName);
 
 authRouter.route("/:id/password").put(verifyToken, forAdmins, changePassword);
+
+authRouter.route("/:id/role").put(verifyToken, forAdmins, changeRole);
 
 module.exports = authRouter;
