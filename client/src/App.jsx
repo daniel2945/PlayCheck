@@ -13,14 +13,10 @@ import PcSetup from "./pages/PcSetup";
 import GamesCatalog from "./pages/GamesCatalog";
 import Result from "./pages/Result";
 import Profile from "./pages/Profile";
-import GameDetails from "./pages/GameDetails"; 
+import GameDetails from "./pages/GameDetails";
 import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";// למעלה בייבואים
-<<<<<<< HEAD
-=======
+import Privacy from "./pages/Privacy"; // למעלה בייבואים
 import Settings from "./pages/Settings";
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
-
 import "./index.css";
 
 // שומר הראש של עמוד המנהל
@@ -76,20 +72,8 @@ function App() {
             <Route path="/details/:gameId" element={<GameDetails />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/settings" element={<Settings />} />
 
-<<<<<<< HEAD
-            {/* דף 404 לכל כתובת לא מוכרת */}
-            <Route
-              path="*"
-              element={
-                <div className="text-center pt-32 text-2xl text-[#9aa0a6]">
-                  404 - Page Not Found
-                </div>
-              }
-            />
-=======
-            
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
             {/* עמוד מנהל - מוגן על ידי AdminRoute */}
             <Route
               path="admin"
@@ -99,10 +83,6 @@ function App() {
                 </AdminRoute>
               }
             />
-<<<<<<< HEAD
-=======
-
-            <Route path="/settings" element={<Settings />} />
 
             {/* דף 404 לכל כתובת לא מוכרת */}
             <Route
@@ -113,7 +93,6 @@ function App() {
                 </div>
               }
             />
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
           </Route>
         </Routes>
       </div>

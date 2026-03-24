@@ -2,10 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API_CALL from "../api/API_CALL";
 import useAuthStore from "../store/useAuthStore";
-<<<<<<< HEAD
 import { GoogleLogin } from "@react-oauth/google";
-=======
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -15,7 +12,7 @@ export default function Auth() {
   const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState(""); // שדה חדש
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [userName, setUserName] = useState("");
   const [message, setMessage] = useState({ text: "", type: "" });
 
@@ -23,7 +20,6 @@ export default function Auth() {
     e.preventDefault();
     setMessage({ text: "", type: "" });
 
-    // בדיקת התאמת סיסמאות בצד הלקוח (Client-side validation)
     if (!isLoginView && password !== confirmPassword) {
       return setMessage({ text: "Passwords do not match!", type: "error" });
     }
@@ -31,11 +27,7 @@ export default function Auth() {
     try {
       const endpoint = isLoginView ? "/api/auth/login" : "/api/auth/register";
       let payload = { email, password };
-<<<<<<< HEAD
 
-=======
-      
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
       if (!isLoginView) {
         const guestSpecs = JSON.parse(localStorage.getItem("guestSpecs")) || {};
         payload = {
@@ -52,17 +44,10 @@ export default function Auth() {
       const data = await API_CALL(endpoint, "POST", payload);
 
       if (!isLoginView) {
-<<<<<<< HEAD
-        setMessage({
-          text: "Registration successful! Please login.",
-          type: "success",
-        });
-=======
         setMessage({ text: "Registration successful! Please login.", type: "success" });
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
         setTimeout(() => {
           setIsLoginView(true);
-          setConfirmPassword(""); // איפוס השדה
+          setConfirmPassword("");
         }, 2000);
       } else {
         if (data.token && data.user) {
@@ -72,15 +57,9 @@ export default function Auth() {
         }
       }
     } catch (err) {
-<<<<<<< HEAD
-      setMessage({
-        text: err.message || "Authentication failed",
-        type: "error",
-=======
       setMessage({ 
         text: err.message || "Authentication failed", 
         type: "error" 
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
       });
     }
   };
@@ -94,19 +73,6 @@ export default function Auth() {
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {message.text && (
-<<<<<<< HEAD
-            <div
-              className={`p-3 rounded-lg text-sm font-medium border ${
-                message.type === "error"
-                  ? "text-[#EA4335] border-[#EA4335]"
-                  : "text-[#34A853] border-[#34A853]"
-              }`}
-            >
-              {message.text}
-            </div>
-          )}
-
-=======
             <div className={`p-3 rounded-lg text-sm font-medium border ${
               message.type === "error" ? "text-[#EA4335] border-[#EA4335]" : "text-[#34A853] border-[#34A853]"
             }`}>
@@ -114,7 +80,6 @@ export default function Auth() {
             </div>
           )}
           
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
           {!isLoginView && (
             <input
               type="text"
@@ -141,12 +106,7 @@ export default function Auth() {
             onChange={(e) => setPassword(e.target.value)}
             className="p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] focus:outline-none focus:border-[#8ab4f8]"
           />
-<<<<<<< HEAD
-
-=======
           
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
-          {/* שדה אימות סיסמה - מופיע רק בהרשמה */}
           {!isLoginView && (
             <input
               type="password"
@@ -174,7 +134,6 @@ export default function Auth() {
 
         <div className="flex justify-center mb-4">
           <GoogleLogin
-           
             onSuccess={async (credentialResponse) => {
               try {
                 const data = await API_CALL("/api/auth/google", "POST", {
@@ -205,16 +164,10 @@ export default function Auth() {
             className="cursor-pointer text-[#9aa0a6] hover:text-[#e8eaed] transition-colors"
             onClick={() => {
               setIsLoginView(!isLoginView);
-              setMessage({ text: "", type: "" }); // איפוס הודעות במעבר
+              setMessage({ text: "", type: "" });
             }}
           >
-<<<<<<< HEAD
-            {isLoginView
-              ? "Don't have an account? Register"
-              : "Already have an account? Login"}
-=======
             {isLoginView ? "Don't have an account? Register" : "Already have an account? Login"}
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
           </p>
         </div>
       </div>

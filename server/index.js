@@ -34,4 +34,7 @@ mongoose
     // Initialize hardware cache after successful DB connection
     initializeHardwareCache();
   })
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+    process.exit(1);
+  });
