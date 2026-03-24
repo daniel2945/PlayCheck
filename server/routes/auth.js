@@ -3,6 +3,7 @@ const authRouter = express.Router();
 const {
   register,
   login,
+  googleLogin,
   deleteUser,
   getAllUsers,
   getUser,
@@ -19,6 +20,7 @@ const { verifyToken, forAdmins } = require("../middlewares/auth");
 // --- נתיבי התחברות והרשמה ---
 authRouter.post("/register", register);
 authRouter.post("/login", login);
+authRouter.post("/google", googleLogin);
 
 // --- נתיבי משתמש מחובר (דורש טוקן) ---
 // כל נתיב שמתחיל ב /me יעבור קודם בדיקת טוקן

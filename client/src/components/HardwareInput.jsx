@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
+<<<<<<< HEAD
+import API_CALL from "../api/API_CALL"; // הפונקציה המרכזית שלך
+=======
 import API_CALL from "../api/API_CALL";
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 
 export default function HardwareInput({ type, placeholder, onSelect }) {
   const [query, setQuery] = useState("");
@@ -7,6 +11,15 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   const [results, setResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
+<<<<<<< HEAD
+  // === מנגנון ה-Debounce והקריאה לשרת ===
+  useEffect(() => {
+    if (query.length < 2) {
+      return;
+    }
+
+    // מגדירים טיימר. הבקשה תישלח רק אם עברו 300 אלפיות שנייה בלי הקלדה
+=======
   // ✨ פונקציית עזר חכמה שמונעת כפילות כמו "Intel Intel Core..." ✨
   const formatHardwareName = (brand, model) => {
     if (!brand) return model;
@@ -19,11 +32,16 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   useEffect(() => {
     if (query.length < 2) return;
 
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
     const delayDebounceFn = setTimeout(async () => {
       try {
         const data = await API_CALL(
           `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`
         );
+<<<<<<< HEAD
+
+=======
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
         if (data.success) {
           setResults(data.data);
         } else {
@@ -35,6 +53,19 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
       }
     }, 300);
 
+<<<<<<< HEAD
+    // פונקציית ניקוי: אם המשתמש הקליד עוד אות לפני שעברו ה-300ms, הטיימר הקודם מבוטל
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, type]); // הפונקציה תרוץ מחדש בכל פעם שהטקסט בחיפוש משתנה
+
+  // הפונקציה הזו עכשיו רק מעדכנת את הטקסט, היא לא פונה לשרת!
+  const handleChange = (e) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    if (newQuery.length < 2) {
+      setResults([]);
+    }
+=======
     return () => clearTimeout(delayDebounceFn);
   }, [query, type]);
 
@@ -42,9 +73,11 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
     const newQuery = e.target.value;
     setQuery(newQuery);
     if (newQuery.length < 2) setResults([]);
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
     setIsOpen(true);
   };
 
+  // === ה-UI נשאר כמעט ללא שינוי, הוא כתוב מצוין ===
   if (selectedItem) {
     return (
       <div className="relative w-full">

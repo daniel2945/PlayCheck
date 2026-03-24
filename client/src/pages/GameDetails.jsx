@@ -67,6 +67,18 @@ export default function GameDetails() {
   return (
     <div className="min-h-screen bg-[#202124] pb-12">
       
+<<<<<<< HEAD
+      {/* אזור ה-Hero (תמונת רקע גדולה) */}
+      <div 
+        className="relative w-full h-[40vh] md:h-[50vh] bg-cover bg-center"
+        style={{ backgroundImage: `url(${heroImage})` }}
+      >
+        {/* שכבת הכהיה (Gradient) כדי שהטקסט יבלוט */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#202124] via-[#202124]/70 to-transparent"></div>
+        
+        <div className="absolute bottom-0 left-0 w-full px-6 md:px-12 pb-8 max-w-7xl mx-auto">
+          <h1 className="text-4xl md:text-6xl font-bold text-[#e8eaed] mb-2 drop-shadow-lg">
+=======
       {/* אזור ה-Hero (מבנה משופר לטשטוש התחתית ולמניעת חיתוך עליון) */}
       <div className="relative w-full h-[45vh] md:h-[60vh]">
         
@@ -85,6 +97,7 @@ export default function GameDetails() {
         
         <div className="absolute bottom-0 left-0 w-full px-6 md:px-12 pb-8 max-w-7xl mx-auto z-10">
           <h1 className="text-4xl md:text-6xl font-bold text-[#e8eaed] mb-2 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
             {game.name || game.title}
           </h1>
           <div className="flex items-center gap-4 text-[#9aa0a6] text-lg font-medium drop-shadow-md">
@@ -100,7 +113,11 @@ export default function GameDetails() {
       </div>
 
       {/* אזור התוכן */}
+<<<<<<< HEAD
+      <div className="px-6 md:px-12 pt-8 max-w-7xl mx-auto flex flex-col md:flex-row gap-12">
+=======
       <div className="px-6 md:px-12 pt-8 max-w-7xl mx-auto flex flex-col md:flex-row gap-12 relative z-20">
+>>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
         
         {/* עמודה מרכזית: תיאור */}
         <div className="flex-1">
