@@ -4,7 +4,10 @@ const User = require("../models/User");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const Hardware = require("../models/Hardware");
+
 const register = async (req, res, next) => {
+  console.log("[REGISTER DEBUG] Received request with body:", req.body);
   try {
     const { email, password, userName, myPc } = req.body;
     if (
@@ -15,31 +18,45 @@ const register = async (req, res, next) => {
       !myPc.gpuId ||
       !myPc.ramGb
     ) {
+      console.log("[REGISTER DEBUG] Missing fields");
       return res.status(400).json({ success: false, data: "fields missing" });
     }
     const isExist = await User.findOne({ email });
     if (isExist) {
+      console.log("[REGISTER DEBUG] User already exists");
       return res
         .status(400)
         .json({ success: false, data: "user already exsits" });
     }
+
+    const defaultCpu = await Hardware.findOne({ type: "CPU" });
+    const defaultGpu = await Hardware.findOne({ type: "GPU" });
+
+    if (!defaultCpu || !defaultGpu) {
+      return res
+        .status(500)
+        .json({ success: false, data: "Default hardware not found" });
+    }
+
     const newUser = new User({
       userName,
       password,
       email,
       myPc: {
-        cpuId: myPc.cpuId,
-        gpuId: myPc.gpuId,
+        cpuId: defaultCpu._id,
+        gpuId: defaultGpu._id,
         ramGb: Number(myPc.ramGb),
       },
     });
     await newUser.save();
+    console.log("[REGISTER DEBUG] User created successfully");
     res.status(201).json({
       success: true,
       data: "user created successfully",
       user: { id: newUser._id, userName: newUser.userName },
     });
   } catch (err) {
+    console.error("[REGISTER ERROR DEBUG]", err);
     next(err);
   }
 };
@@ -346,12 +363,6 @@ const changeRole = async (req, res, next) => {
   }
 };
 
-
-<<<<<<< HEAD
-=======
-
-
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 module.exports = {
   register,
   login,
@@ -365,9 +376,5 @@ module.exports = {
   changeName,
   changePassword,
   changeMyPassword,
-<<<<<<< HEAD
-  changeRole
-=======
   changeRole,
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 };

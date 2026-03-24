@@ -1,13 +1,4 @@
 import { useState, useEffect } from "react";
-<<<<<<< HEAD
-import { Link } from "react-router-dom";
-import useAuthStore from "../store/useAuthStore";
-
-export default function Profile() {
-  const { user } = useAuthStore();
-  // Simplified specs state, directly reflecting the clean data we now expect
-  const [specs, setSpecs] = useState(null);
-=======
 import { Link, useNavigate } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import API_CALL from "../api/API_CALL";
@@ -20,7 +11,6 @@ export default function Profile() {
   // הסטייט להיסטוריית חיפושים
   const [searchHistory, setSearchHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
 
   // הסטייט למשחקים מומלצים
   const [recommendations, setRecommendations] = useState([]);
@@ -28,18 +18,6 @@ export default function Profile() {
 
   // משיכת המחשב השמור מתוך ה-Store
   useEffect(() => {
-<<<<<<< HEAD
-    // The App router ensures only authenticated users reach this page.
-    // With the server bug fixed, we can now rely on a consistent data structure.
-    if (user && user.myPc && user.myPc.cpuId && user.myPc.gpuId) {
-      setSpecs({
-        cpu: user.myPc.cpuId, // This will be the populated object from the server
-        gpu: user.myPc.gpuId, // This will be the populated object
-        ram: user.myPc.ramGb,
-      });
-    } else {
-      // If the user object or myPc specs are not present, ensure specs are null.
-=======
     if (user && user.myPc && user.myPc.cpuId && user.myPc.gpuId) {
       setSpecs({
         cpu: user.myPc.cpuId, 
@@ -47,22 +25,10 @@ export default function Profile() {
         ram: user.myPc.ramGb,
       });
     } else {
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
       setSpecs(null);
     }
   }, [user]);
 
-<<<<<<< HEAD
-  // Helper function to safely render hardware name
-  const getHardwareName = (hardware) => {
-    if (!hardware || typeof hardware !== 'object') return "Not Set";
-    return `${hardware.brand || ""} ${hardware.model || ""}`.trim();
-  }
-
-  return (
-    <div className="px-6 py-12 max-w-4xl mx-auto space-y-8 min-h-screen">
-      <h2 className="text-3xl text-[#e8eaed] font-medium border-b border-[#5f6368] pb-4">
-=======
   // משיכת היסטוריית החיפושים ומשחקים מומלצים מהשרת
   useEffect(() => {
     const fetchHistory = async () => {
@@ -141,16 +107,11 @@ export default function Profile() {
   return (
     <div className="px-6 py-12 max-w-4xl mx-auto space-y-8 min-h-screen w-full">
       <h2 className="text-3xl text-[#e8eaed] font-medium border-b border-[#303134] pb-4">
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
         Hello, <span className="text-[#8ab4f8]">{user?.userName || "Gamer"}</span>
       </h2>
 
       {/* Hardware Specs Section */}
-<<<<<<< HEAD
-      <div className="bg-[#303134] border border-[#5f6368] rounded-xl p-6">
-=======
       <div className="bg-[#303134] border border-[#5f6368] rounded-xl p-6 shadow-lg">
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
         <h3 className="text-xl text-[#8ab4f8] mb-4">My Computer Specs</h3>
         
         {specs ? (
@@ -193,24 +154,6 @@ export default function Profile() {
         )}
       </div>
 
-<<<<<<< HEAD
-      {/* Future Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-[#303134] border border-[#5f6368] rounded-xl p-6 opacity-60">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl text-[#8ab4f8]">Recommended Games</h3>
-            <span className="text-xs bg-[#202124] text-[#9aa0a6] px-2 py-1 rounded border border-[#5f6368]">Coming Soon</span>
-          </div>
-          <p className="text-[#9aa0a6] text-sm">Personalized game recommendations based on your hardware will appear here.</p>
-        </div>
-
-        <div className="bg-[#303134] border border-[#5f6368] rounded-xl p-6 opacity-60">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl text-[#8ab4f8]">Search History</h3>
-            <span className="text-xs bg-[#202124] text-[#9aa0a6] px-2 py-1 rounded border border-[#5f6368]">Coming Soon</span>
-          </div>
-          <p className="text-[#9aa0a6] text-sm">A log of your recent hardware compatibility checks.</p>
-=======
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         
         {/* Recommended Games */}
@@ -258,7 +201,6 @@ export default function Profile() {
               </div>
             )}
           </div>
->>>>>>> fcde8e3109dccda3b8ec10880406b049b8b00542
         </div>
 
         {/* Search History */}
