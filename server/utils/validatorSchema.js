@@ -42,11 +42,18 @@ const updateRoleSchema = z.object({
   })
 });
 
+const reviewSchema = z.object({
+  gameId: z.number().positive("Game ID must be a valid number"),
+  rating: z.number().min(1).max(5, "Rating must be between 1 and 5"),
+  text: z.string().min(10, "Review is too short (min 10 characters)").max(1000)
+});
+
 module.exports = { 
   registerSchema, 
   loginSchema, 
   updatePasswordSchema, 
   updateNameSchema, 
   updateEmailSchema,
-  updateRoleSchema
+  updateRoleSchema,
+  reviewSchema
 };

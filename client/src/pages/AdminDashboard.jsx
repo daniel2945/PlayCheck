@@ -96,15 +96,41 @@ export default function AdminDashboard() {
   // ==========================================
   // פונקציות ניהול משתמשים
   // ==========================================
-  const handleDeleteUser = async (userId, userName) => {
-    if (!window.confirm(`Are you sure you want to delete user ${userName}?`))
-      return;
-    try {
-      await API_CALL(`/api/auth/${userId}`, "DELETE");
-      setUsers(users.filter((u) => u._id !== userId));
-    } catch (err) {
-      toast.error("Error: " + err.message);
-    }
+  const handleDeleteUser = (userId, userName) => {
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-[#e8eaed]">
+            Are you sure you want to delete user{" "}
+            <span className="font-bold text-[#EA4335]">{userName}</span>?
+          </p>
+          <div className="flex gap-2 justify-end mt-2">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-sm text-[#9aa0a6] hover:bg-[#3c4043] rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                try {
+                  await API_CALL(`/api/auth/${userId}`, "DELETE");
+                  setUsers(users.filter((u) => u._id !== userId));
+                  toast.success("User deleted successfully");
+                } catch (err) {
+                  toast.error("Error: " + err.message);
+                }
+              }}
+              className="px-3 py-1.5 text-sm bg-[#EA4335] text-white rounded hover:bg-[#c5221f] transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity },
+    );
   };
 
   const openUserModal = (user) => {
@@ -159,14 +185,42 @@ export default function AdminDashboard() {
   // ==========================================
   // פונקציות ניהול משחקים
   // ==========================================
-  const handleDeleteGame = async (gameId, title) => {
-    if (!window.confirm(`Delete ${title} from DB?`)) return;
-    try {
-      await API_CALL(`/api/game/${gameId}`, "DELETE");
-      setGames(games.filter((g) => g._id !== gameId));
-    } catch (err) {
-      toast.error("Error: " + err.message);
-    }
+  const handleDeleteGame = (gameId, title) => {
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-[#e8eaed]">
+            Are you sure you want to delete{" "}
+            <span className="font-bold text-[#EA4335]">{title}</span> from the
+            DB?
+          </p>
+          <div className="flex gap-2 justify-end mt-2">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-sm text-[#9aa0a6] hover:bg-[#3c4043] rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                try {
+                  await API_CALL(`/api/game/${gameId}`, "DELETE");
+                  setGames(games.filter((g) => g._id !== gameId));
+                  toast.success("Game deleted successfully");
+                } catch (err) {
+                  toast.error("Error: " + err.message);
+                }
+              }}
+              className="px-3 py-1.5 text-sm bg-[#EA4335] text-white rounded hover:bg-[#c5221f] transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity },
+    );
   };
 
   const openGameModal = (game = null) => {
@@ -240,14 +294,41 @@ export default function AdminDashboard() {
   // ==========================================
   // פונקציות ניהול חומרה
   // ==========================================
-  const handleDeleteHardware = async (id, model) => {
-    if (!window.confirm(`Delete hardware: ${model}?`)) return;
-    try {
-      await API_CALL(`/api/hardware/${id}`, "DELETE");
-      setHardwares(hardwares.filter((h) => h._id !== id));
-    } catch (err) {
-      toast.error("Error: " + err.message);
-    }
+  const handleDeleteHardware = (id, model) => {
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-[#e8eaed]">
+            Are you sure you want to delete hardware:{" "}
+            <span className="font-bold text-[#EA4335]">{model}</span>?
+          </p>
+          <div className="flex gap-2 justify-end mt-2">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-sm text-[#9aa0a6] hover:bg-[#3c4043] rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                try {
+                  await API_CALL(`/api/hardware/${id}`, "DELETE");
+                  setHardwares(hardwares.filter((h) => h._id !== id));
+                  toast.success("Hardware deleted successfully");
+                } catch (err) {
+                  toast.error("Error: " + err.message);
+                }
+              }}
+              className="px-3 py-1.5 text-sm bg-[#EA4335] text-white rounded hover:bg-[#c5221f] transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity },
+    );
   };
 
   const openHardwareModal = (hardware = null) => {
@@ -350,19 +431,35 @@ export default function AdminDashboard() {
                       <td className="p-4 text-[#9aa0a6]">{u.email}</td>
                       <td className="p-4">
                         {u.isAdmin ? (
-                          <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold">Admin</span>
+                          <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold">
+                            Admin
+                          </span>
                         ) : (
-                          <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold">User</span>
+                          <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold">
+                            User
+                          </span>
                         )}
                       </td>
                       <td className="p-4 flex gap-4">
                         {!isOtherAdmin ? (
-                          <button onClick={() => openUserModal(u)} className="text-[#8ab4f8] hover:underline">Edit</button>
+                          <button
+                            onClick={() => openUserModal(u)}
+                            className="text-[#8ab4f8] hover:underline"
+                          >
+                            Edit
+                          </button>
                         ) : (
-                          <span className="text-[#5f6368] text-sm cursor-not-allowed">Protected</span>
+                          <span className="text-[#5f6368] text-sm cursor-not-allowed">
+                            Protected
+                          </span>
                         )}
                         {!u.isAdmin && (
-                          <button onClick={() => handleDeleteUser(u._id, u.userName)} className="text-[#EA4335] hover:underline">Delete</button>
+                          <button
+                            onClick={() => handleDeleteUser(u._id, u.userName)}
+                            className="text-[#EA4335] hover:underline"
+                          >
+                            Delete
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -371,26 +468,55 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Mobile Card View */}
           <div className="flex flex-col md:hidden gap-4 w-full">
             {users.map((u) => {
               const isOtherAdmin = u.isAdmin && u._id !== currentUser?._id;
               return (
-                <div key={u._id} className="bg-[#303134] border border-[#5f6368] rounded-xl p-4 flex flex-col gap-3 shadow-sm w-full">
+                <div
+                  key={u._id}
+                  className="bg-[#303134] border border-[#5f6368] rounded-xl p-4 flex flex-col gap-3 shadow-sm w-full"
+                >
                   <div className="flex justify-between items-center border-b border-[#5f6368] pb-2 gap-2">
-                    <span className="font-bold text-[#e8eaed] text-lg truncate min-w-0 flex-1">{u.userName}</span>
+                    <span className="font-bold text-[#e8eaed] text-lg truncate min-w-0 flex-1">
+                      {u.userName}
+                    </span>
                     <span className="flex-shrink-0">
-                      {u.isAdmin ? <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold">Admin</span> : <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold">User</span>}
+                      {u.isAdmin ? (
+                        <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold">
+                          Admin
+                        </span>
+                      ) : (
+                        <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold">
+                          User
+                        </span>
+                      )}
                     </span>
                   </div>
-                  <div className="text-[#9aa0a6] text-sm break-all w-full">{u.email}</div>
+                  <div className="text-[#9aa0a6] text-sm break-all w-full">
+                    {u.email}
+                  </div>
                   <div className="flex justify-between items-center pt-2 mt-auto">
                     {!isOtherAdmin ? (
-                      <button onClick={() => openUserModal(u)} className="text-[#8ab4f8] font-medium hover:underline">Edit User</button>
-                    ) : <span className="text-[#5f6368] text-sm cursor-not-allowed">Protected User</span>}
+                      <button
+                        onClick={() => openUserModal(u)}
+                        className="text-[#8ab4f8] font-medium hover:underline"
+                      >
+                        Edit User
+                      </button>
+                    ) : (
+                      <span className="text-[#5f6368] text-sm cursor-not-allowed">
+                        Protected User
+                      </span>
+                    )}
                     {!u.isAdmin && (
-                      <button onClick={() => handleDeleteUser(u._id, u.userName)} className="text-[#EA4335] font-medium hover:underline">Delete</button>
+                      <button
+                        onClick={() => handleDeleteUser(u._id, u.userName)}
+                        className="text-[#EA4335] font-medium hover:underline"
+                      >
+                        Delete
+                      </button>
                     )}
                   </div>
                 </div>
@@ -434,20 +560,49 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {filteredGames.map((g) => (
-                  <tr key={g._id} className="border-b border-[#5f6368] hover:bg-[#3c4043]">
+                  <tr
+                    key={g._id}
+                    className="border-b border-[#5f6368] hover:bg-[#3c4043]"
+                  >
                     <td className="p-4">
-                      {g.image ? <img src={g.image} alt={g.title} className="w-16 h-10 object-cover rounded" /> : <div className="w-16 h-10 bg-[#202124] rounded border border-[#5f6368]"></div>}
+                      {g.image ? (
+                        <img
+                          src={g.image}
+                          alt={g.title}
+                          className="w-16 h-10 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-16 h-10 bg-[#202124] rounded border border-[#5f6368]"></div>
+                      )}
                     </td>
-                    <td className="p-4 text-[#e8eaed] font-medium">{g.title}</td>
-                    <td className="p-4 text-[#9aa0a6] text-sm max-w-xs truncate">{g.description}</td>
+                    <td className="p-4 text-[#e8eaed] font-medium">
+                      {g.title}
+                    </td>
+                    <td className="p-4 text-[#9aa0a6] text-sm max-w-xs truncate">
+                      {g.description}
+                    </td>
                     <td className="p-4 flex gap-4 items-center h-full mt-2">
-                      <button onClick={() => openGameModal(g)} className="text-[#8ab4f8] hover:underline">Edit</button>
-                      <button onClick={() => handleDeleteGame(g._id, g.title)} className="text-[#EA4335] hover:underline">Delete</button>
+                      <button
+                        onClick={() => openGameModal(g)}
+                        className="text-[#8ab4f8] hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteGame(g._id, g.title)}
+                        className="text-[#EA4335] hover:underline"
+                      >
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
                 {filteredGames.length === 0 && (
-                  <tr><td colSpan="4" className="p-8 text-center text-[#9aa0a6]">No games found matching your search.</td></tr>
+                  <tr>
+                    <td colSpan="4" className="p-8 text-center text-[#9aa0a6]">
+                      No games found matching your search.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -456,23 +611,50 @@ export default function AdminDashboard() {
           {/* Mobile Card View */}
           <div className="flex flex-col md:hidden gap-4 w-full">
             {filteredGames.map((g) => (
-              <div key={g._id} className="bg-[#303134] border border-[#5f6368] rounded-xl p-4 flex flex-col gap-3 shadow-sm w-full overflow-hidden">
+              <div
+                key={g._id}
+                className="bg-[#303134] border border-[#5f6368] rounded-xl p-4 flex flex-col gap-3 shadow-sm w-full overflow-hidden"
+              >
                 <div className="flex items-center gap-4 border-b border-[#5f6368] pb-3 w-full">
                   {g.image ? (
-                    <img src={g.image} alt={g.title} className="w-16 h-16 object-cover rounded shadow flex-shrink-0" />
+                    <img
+                      src={g.image}
+                      alt={g.title}
+                      className="w-16 h-16 object-cover rounded shadow flex-shrink-0"
+                    />
                   ) : (
-                    <div className="w-16 h-16 bg-[#202124] rounded border border-[#5f6368] flex items-center justify-center text-xs text-[#5f6368] flex-shrink-0">No Img</div>
+                    <div className="w-16 h-16 bg-[#202124] rounded border border-[#5f6368] flex items-center justify-center text-xs text-[#5f6368] flex-shrink-0">
+                      No Img
+                    </div>
                   )}
-                  <span className="font-bold text-[#e8eaed] text-lg leading-tight flex-1 truncate min-w-0">{g.title}</span>
+                  <span className="font-bold text-[#e8eaed] text-lg leading-tight flex-1 truncate min-w-0">
+                    {g.title}
+                  </span>
                 </div>
-                <div className="text-[#9aa0a6] text-sm line-clamp-2 break-words">{g.description}</div>
+                <div className="text-[#9aa0a6] text-sm line-clamp-2 break-words">
+                  {g.description}
+                </div>
                 <div className="flex justify-between gap-4 pt-2 mt-1">
-                  <button onClick={() => openGameModal(g)} className="text-[#8ab4f8] font-medium hover:underline flex-1 text-left">Edit Game</button>
-                  <button onClick={() => handleDeleteGame(g._id, g.title)} className="text-[#EA4335] font-medium hover:underline flex-1 text-right">Delete</button>
+                  <button
+                    onClick={() => openGameModal(g)}
+                    className="text-[#8ab4f8] font-medium hover:underline flex-1 text-left"
+                  >
+                    Edit Game
+                  </button>
+                  <button
+                    onClick={() => handleDeleteGame(g._id, g.title)}
+                    className="text-[#EA4335] font-medium hover:underline flex-1 text-right"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
-            {filteredGames.length === 0 && <div className="p-8 text-center text-[#9aa0a6] bg-[#303134] rounded-xl border border-[#5f6368]">No games found matching your search.</div>}
+            {filteredGames.length === 0 && (
+              <div className="p-8 text-center text-[#9aa0a6] bg-[#303134] rounded-xl border border-[#5f6368]">
+                No games found matching your search.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -528,20 +710,42 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {filteredHardwares.slice((hardwarePage - 1) * hardwareItemsPerPage, hardwarePage * hardwareItemsPerPage).map((h) => (
-                  <tr key={h._id} className="border-b border-[#5f6368] hover:bg-[#3c4043]">
-                    <td className="p-4 font-bold text-[#8ab4f8]">{h.type}</td>
-                    <td className="p-4 text-[#e8eaed]">{h.brand}</td>
-                    <td className="p-4 text-[#9aa0a6]">{h.model}</td>
-                    <td className="p-4 text-[#34A853]">{h.benchmarkScore}</td>
-                    <td className="p-4 flex gap-4">
-                      <button onClick={() => openHardwareModal(h)} className="text-[#8ab4f8] hover:underline">Edit</button>
-                      <button onClick={() => handleDeleteHardware(h._id, h.model)} className="text-[#EA4335] hover:underline">Delete</button>
+                {filteredHardwares
+                  .slice(
+                    (hardwarePage - 1) * hardwareItemsPerPage,
+                    hardwarePage * hardwareItemsPerPage,
+                  )
+                  .map((h) => (
+                    <tr
+                      key={h._id}
+                      className="border-b border-[#5f6368] hover:bg-[#3c4043]"
+                    >
+                      <td className="p-4 font-bold text-[#8ab4f8]">{h.type}</td>
+                      <td className="p-4 text-[#e8eaed]">{h.brand}</td>
+                      <td className="p-4 text-[#9aa0a6]">{h.model}</td>
+                      <td className="p-4 text-[#34A853]">{h.benchmarkScore}</td>
+                      <td className="p-4 flex gap-4">
+                        <button
+                          onClick={() => openHardwareModal(h)}
+                          className="text-[#8ab4f8] hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteHardware(h._id, h.model)}
+                          className="text-[#EA4335] hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                {filteredHardwares.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="p-8 text-center text-[#9aa0a6]">
+                      No hardware found matching your search.
                     </td>
                   </tr>
-                ))}
-                {filteredHardwares.length === 0 && (
-                  <tr><td colSpan="5" className="p-8 text-center text-[#9aa0a6]">No hardware found matching your search.</td></tr>
                 )}
               </tbody>
             </table>
@@ -549,25 +753,53 @@ export default function AdminDashboard() {
 
           {/* Mobile Card View */}
           <div className="flex flex-col md:hidden gap-4 w-full">
-            {filteredHardwares.slice((hardwarePage - 1) * hardwareItemsPerPage, hardwarePage * hardwareItemsPerPage).map((h) => (
-              <div key={h._id} className="bg-[#303134] border border-[#5f6368] rounded-xl p-4 flex flex-col gap-2 shadow-sm w-full overflow-hidden">
-                <div className="flex justify-between items-start border-b border-[#5f6368] pb-2 gap-2 w-full">
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <span className="font-bold text-[#8ab4f8] text-sm truncate">{h.type}</span>
-                    <span className="font-bold text-[#e8eaed] text-lg leading-tight truncate">{h.brand} {h.model}</span>
+            {filteredHardwares
+              .slice(
+                (hardwarePage - 1) * hardwareItemsPerPage,
+                hardwarePage * hardwareItemsPerPage,
+              )
+              .map((h) => (
+                <div
+                  key={h._id}
+                  className="bg-[#303134] border border-[#5f6368] rounded-xl p-4 flex flex-col gap-2 shadow-sm w-full overflow-hidden"
+                >
+                  <div className="flex justify-between items-start border-b border-[#5f6368] pb-2 gap-2 w-full">
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-bold text-[#8ab4f8] text-sm truncate">
+                        {h.type}
+                      </span>
+                      <span className="font-bold text-[#e8eaed] text-lg leading-tight truncate">
+                        {h.brand} {h.model}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end flex-shrink-0">
+                      <span className="text-[#9aa0a6] text-xs">Score</span>
+                      <span className="text-[#34A853] font-bold text-lg">
+                        {h.benchmarkScore}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col items-end flex-shrink-0">
-                    <span className="text-[#9aa0a6] text-xs">Score</span>
-                    <span className="text-[#34A853] font-bold text-lg">{h.benchmarkScore}</span>
+                  <div className="flex justify-between pt-2 mt-1">
+                    <button
+                      onClick={() => openHardwareModal(h)}
+                      className="text-[#8ab4f8] font-medium hover:underline"
+                    >
+                      Edit Hardware
+                    </button>
+                    <button
+                      onClick={() => handleDeleteHardware(h._id, h.model)}
+                      className="text-[#EA4335] font-medium hover:underline"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-                <div className="flex justify-between pt-2 mt-1">
-                  <button onClick={() => openHardwareModal(h)} className="text-[#8ab4f8] font-medium hover:underline">Edit Hardware</button>
-                  <button onClick={() => handleDeleteHardware(h._id, h.model)} className="text-[#EA4335] font-medium hover:underline">Delete</button>
-                </div>
+              ))}
+            {filteredHardwares.length === 0 && (
+              <div className="p-8 text-center text-[#9aa0a6] bg-[#303134] rounded-xl border border-[#5f6368]">
+                No hardware found matching your search.
               </div>
-            ))}
-            {filteredHardwares.length === 0 && <div className="p-8 text-center text-[#9aa0a6] bg-[#303134] rounded-xl border border-[#5f6368]">No hardware found matching your search.</div>}
+            )}
           </div>
 
           {/* Pagination shared for both Desktop and Mobile views */}
@@ -581,15 +813,24 @@ export default function AdminDashboard() {
                 Previous
               </button>
               <span className="text-[#9aa0a6] font-medium text-sm sm:text-base text-center">
-                Page {hardwarePage} of {Math.ceil(filteredHardwares.length / hardwareItemsPerPage)}
+                Page {hardwarePage} of{" "}
+                {Math.ceil(filteredHardwares.length / hardwareItemsPerPage)}
               </span>
               <button
                 onClick={() =>
                   setHardwarePage((prev) =>
-                    Math.min(prev + 1, Math.ceil(filteredHardwares.length / hardwareItemsPerPage))
+                    Math.min(
+                      prev + 1,
+                      Math.ceil(
+                        filteredHardwares.length / hardwareItemsPerPage,
+                      ),
+                    ),
                   )
                 }
-                disabled={hardwarePage === Math.ceil(filteredHardwares.length / hardwareItemsPerPage)}
+                disabled={
+                  hardwarePage ===
+                  Math.ceil(filteredHardwares.length / hardwareItemsPerPage)
+                }
                 className="px-3 py-2 sm:px-4 bg-[#202124] text-[#e8eaed] text-sm sm:text-base rounded-lg disabled:opacity-50 hover:bg-[#3c4043] transition-colors border border-[#5f6368] whitespace-nowrap"
               >
                 Next

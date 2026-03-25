@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import API_CALL from "../api/API_CALL";
+import toast from "react-hot-toast";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -16,15 +17,12 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // סטייט להודעות מערכת
-  const [status, setStatus] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
 
   // --- עדכון שם משתמש ---
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setStatus({ type: "", message: "" });
 
     try {
       const data = await API_CALL("/api/auth/me/name", "PUT", {
@@ -32,18 +30,12 @@ export default function Settings() {
       });
 
       if (data.success) {
-        setStatus({
-          type: "success",
-          message: "Profile updated successfully!",
-        });
+        toast.success("Profile updated successfully!");
         // מעדכנים את ה-Store המקומי
         setAuth({ ...user, userName }, token);
       }
     } catch (err) {
-      setStatus({
-        type: "error",
-        message: err.message || "Failed to update profile.",
-      });
+      toast.error(err.message || "Failed to update profile.");
     } finally {
       setLoading(false);
     }
@@ -52,10 +44,9 @@ export default function Settings() {
   // --- עדכון סיסמה ---
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    setStatus({ type: "", message: "" });
 
     if (newPassword !== confirmPassword) {
-      setStatus({ type: "error", message: "New passwords do not match." });
+      toast.error("New passwords do not match.");
       return;
     }
 
@@ -67,40 +58,54 @@ export default function Settings() {
       });
 
       if (data.success) {
-        setStatus({
-          type: "success",
-          message: "Password changed successfully!",
-        });
+        toast.success("Password changed successfully!");
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       }
     } catch (err) {
-      setStatus({
-        type: "error",
-        message: err.message || "Failed to change password.",
-      });
+      toast.error(err.message || "Failed to change password.");
     } finally {
       setLoading(false);
     }
   };
 
   // --- מחיקת חשבון ---
-  const handleDeleteAccount = async () => {
-    const confirmDelete = window.confirm(
-      "Are you absolutely sure you want to delete your account? This action cannot be undone and your PC specs will be lost.",
+  const handleDeleteAccount = () => {
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-[#e8eaed]">
+            Are you absolutely sure you want to delete your account? This action
+            cannot be undone and your PC specs will be lost.
+          </p>
+          <div className="flex gap-2 justify-end mt-2">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-sm text-[#9aa0a6] hover:bg-[#3c4043] rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                try {
+                  await API_CALL(`/api/auth/${user._id}`, "DELETE");
+                  logout();
+                  navigate("/");
+                } catch (err) {
+                  toast.error(err.message || "Failed to delete account.");
+                }
+              }}
+              className="px-3 py-1.5 text-sm bg-[#EA4335] text-white rounded hover:bg-[#c5221f] transition-colors"
+            >
+              Delete My Account
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity },
     );
-
-    if (!confirmDelete) return;
-
-    try {
-      // ראוט למחיקת המשתמש עצמו
-      await API_CALL(`/api/auth/${user._id}`, "DELETE");
-      logout();
-      navigate("/");
-    } catch (err) {
-      setStatus({ type: "error", message: "Failed to delete account." });
-    }
   };
 
   return (
@@ -108,19 +113,6 @@ export default function Settings() {
       <h1 className="text-2xl sm:text-3xl font-bold text-[#e8eaed] mb-6 sm:mb-8 border-b border-[#303134] pb-4 text-center sm:text-left">
         Account Settings
       </h1>
-
-      {/* אזור הודעות משותף */}
-      {status.message && (
-        <div
-          className={`p-4 rounded-xl mb-8 font-medium border ${
-            status.type === "success"
-              ? "bg-[#34A853]/10 border-[#34A853] text-[#81c995]"
-              : "bg-[#EA4335]/10 border-[#EA4335] text-[#f28b82]"
-          }`}
-        >
-          {status.message}
-        </div>
-      )}
 
       <div className="space-y-8">
         {/* =========================================
