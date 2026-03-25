@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"; // ייבוא הראוטר
 import API_CALL from "../api/API_CALL"; // ייבוא הפונקציה שלך
 import HardwareInput from "../components/HardwareInput";
 import useAuthStore from "../store/useAuthStore";
+import toast from "react-hot-toast";
 
 export default function PcSetup() {
   const navigate = useNavigate(); // הפעלת הניווט
@@ -19,7 +20,9 @@ export default function PcSetup() {
     }
 
     if (!cpu?._id || !gpu?._id) {
-      alert("⚠️ Error: Selected hardware is missing a valid ID. Please re-select from the search results.");
+      toast.error(
+        "Selected hardware is missing a valid ID. Please re-select from the search results.",
+      );
       return;
     }
 
@@ -56,23 +59,24 @@ export default function PcSetup() {
   };
 
   return (
-    <div className="flex flex-col items-center pt-24 px-4 min-h-screen">
-      <h2 className="text-3xl text-[#e8eaed] mb-10">Set Up Your PC Specs</h2>
+    <div className="flex flex-col items-center pt-16 sm:pt-24 px-4 min-h-screen">
+      <h2 className="text-2xl sm:text-3xl text-[#e8eaed] mb-8 sm:mb-10 text-center">
+        Set Up Your PC Specs
+      </h2>
       <div className="w-full max-w-2xl space-y-6">
-        
         <HardwareInput
           type="CPU"
           placeholder="Search CPU (e.g. i7 13700K)..."
           onSelect={setCpu}
         />
-        
+
         <HardwareInput
           type="GPU"
           placeholder="Search GPU (e.g. RTX 4070)..."
           onSelect={setGpu}
         />
 
-        <div className="bg-[#303134] p-7 rounded-3xl border border-[#5f6368]">
+        <div className="bg-[#303134] p-5 sm:p-7 rounded-3xl border border-[#5f6368]">
           <div className="flex justify-between mb-4 text-[#e8eaed]">
             <span>System RAM:</span>
             <span className="text-[#8ab4f8] font-bold">{ram} GB</span>
@@ -94,7 +98,9 @@ export default function PcSetup() {
 
         <div className="flex flex-col items-center mt-8 space-y-4">
           {saveMessage && (
-            <div className={`text-sm font-medium px-4 py-2 rounded-full border bg-[#303134] text-[#e8eaed] ${saveMessage.includes('⚠️') ? 'border-[#EA4335]' : 'border-[#34A853]'}`}>
+            <div
+              className={`text-sm font-medium px-4 py-2 rounded-full border bg-[#303134] text-[#e8eaed] ${saveMessage.includes("⚠️") ? "border-[#EA4335]" : "border-[#34A853]"}`}
+            >
               {saveMessage}
             </div>
           )}

@@ -18,6 +18,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy"; // למעלה בייבואים
 import Settings from "./pages/Settings";
 import "./index.css";
+import { Toaster } from "react-hot-toast";
 
 // שומר הראש של עמוד המנהל
 const AdminRoute = ({ children }) => {
@@ -42,6 +43,16 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Toaster 
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#303134',
+            color: '#e8eaed',
+            border: '1px solid #5f6368',
+          },
+        }} 
+      />
       <div className="min-h-screen bg-[#202124] text-white font-sans">
         <Routes>
           {/* ה-Layout עוטף את כל הדפים ומכיל את ה-Navbar */}

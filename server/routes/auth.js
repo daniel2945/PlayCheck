@@ -7,42 +7,52 @@ const {
   deleteUser,
   getAllUsers,
   getUser,
-  changeEmail,
-  changeMyEmail,
-  changeMyName,
-  changeName,
-  changePassword,
-  changeMyPassword,
+  updateEmail,
+  updateName,
+  updatePassword,
   changeRole,
 } = require("../controllers/auth");
-const { verifyToken, forAdmins } = require("../middlewares/auth");
+const { verifyToken, forAdmins, validate } = require("../middlewares/auth");
+
+// --- ייבוא Zod ---
+const {
+  registerSchema,
+  loginSchema,
+  updatePasswordSchema,
+  updateNameSchema,
+  updateEmailSchema,
+  updateRoleSchema,
+} = require("../utils/authValidator");
 
 // --- נתיבי התחברות והרשמה ---
-authRouter.post("/register", register);
-authRouter.post("/login", login);
+authRouter.post("/register", validate(registerSchema), register);
+authRouter.post("/login", validate(loginSchema), login);
 authRouter.post("/google", googleLogin);
 
 // --- נתיבי משתמש מחובר (דורש טוקן) ---
-// כל נתיב שמתחיל ב /me יעבור קודם בדיקת טוקן
 authRouter.use("/me", verifyToken);
 
 authRouter.get("/me", getUser);
-authRouter.put("/me/email", changeMyEmail);
-authRouter.put("/me/name", changeMyName);
-authRouter.put("/me/password", changeMyPassword);
+authRouter.put("/me/email", validate(updateEmailSchema), updateEmail);
+authRouter.put("/me/name", validate(updateNameSchema), updateName);
+authRouter.put("/me/password", validate(updatePasswordSchema), updatePassword);
 
 // --- נתיבי ניהול (Admins Only) ---
-// הנתיב הכפול נמחק מכאן
 authRouter.route("/").get(verifyToken, forAdmins, getAllUsers);
 
 authRouter.route("/:id").delete(verifyToken, forAdmins, deleteUser);
 
-authRouter.route("/:id/email").put(verifyToken, forAdmins, changeEmail);
-
-authRouter.route("/:id/name").put(verifyToken, forAdmins, changeName);
-
-authRouter.route("/:id/password").put(verifyToken, forAdmins, changePassword);
-
-authRouter.route("/:id/role").put(verifyToken, forAdmins, changeRole);
+authRouter
+  .route("/:id/password")
+  .put(verifyToken, forAdmins, validate(updatePasswordSchema), updatePassword);
+authRouter
+  .route("/:id/name")
+  .put(verifyToken, forAdmins, validate(updateNameSchema), updateName);
+authRouter
+  .route("/:id/email")
+  .put(verifyToken, forAdmins, validate(updateEmailSchema), updateEmail);
+authRouter
+  .route("/:id/role")
+  .put(verifyToken, forAdmins, validate(updateRoleSchema), changeRole);
 
 module.exports = authRouter;

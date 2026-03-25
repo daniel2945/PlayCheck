@@ -20,7 +20,9 @@
     "express": "^5.2.1",
     "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.3.0"
+    "mongoose": "^9.3.0",
+    "react-hot-toast": "^2.6.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
