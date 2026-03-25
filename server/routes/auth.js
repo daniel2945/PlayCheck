@@ -12,7 +12,8 @@ const {
   updatePassword,
   changeRole,
 } = require("../controllers/auth");
-const { verifyToken, forAdmins, validate } = require("../middlewares/auth");
+const { verifyToken, forAdmins } = require("../middlewares/auth");
+const { validate } = require("../middlewares/validate");
 
 // --- ייבוא Zod ---
 const {
@@ -22,7 +23,7 @@ const {
   updateNameSchema,
   updateEmailSchema,
   updateRoleSchema,
-} = require("../utils/authValidator");
+} = require("../utils/validatorSchema");
 
 // --- נתיבי התחברות והרשמה ---
 authRouter.post("/register", validate(registerSchema), register);

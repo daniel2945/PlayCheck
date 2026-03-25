@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API_CALL from "../api/API_CALL";
+import GameReviews from "../components/GameReviews"; 
 
 export default function GameDetails() {
   const { gameId } = useParams();
@@ -33,6 +34,13 @@ export default function GameDetails() {
     }
   }, [gameId]);
 
+  const scrollToReviews = () => {
+    const reviewsSection = document.getElementById("reviews-section");
+    if (reviewsSection) {
+      reviewsSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen pt-24 bg-[#202124]">
@@ -58,13 +66,11 @@ export default function GameDetails() {
     );
   }
 
-  // תמונת רקע (אם אין, נשים משהו חלופי כהה)
   const heroImage =
     game.background_image ||
     game.image ||
     "https://placehold.co/1920x1080/1a1a1a/ffffff?text=No+Image+Available";
 
-  // עיבוד התאריך המדויק (לפי releasedDate שמגיע מהשרת/מונגו)
   const rawDate = game.releasedDate;
   const releasedDate =
     rawDate && rawDate !== "TBA"
@@ -77,9 +83,7 @@ export default function GameDetails() {
 
   return (
     <div className="min-h-screen bg-[#202124] pb-12">
-      {/* אזור ה-Hero (מבנה משופר לטשטוש התחתית ולמניעת חיתוך עליון) */}
       <div className="relative w-full h-[45vh] md:h-[60vh]">
-        {/* התמונה עצמה - bg-top מונע חיתוך מלמעלה, והמסכה מטשטשת את התחתית */}
         <div
           className="absolute inset-0 w-full h-full bg-cover bg-top"
           style={{
@@ -91,7 +95,6 @@ export default function GameDetails() {
           }}
         ></div>
 
-        {/* שכבת הכהיה (Gradient) כדי שהטקסט יבלוט */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#202124] via-[#202124]/50 to-transparent"></div>
 
         <div className="absolute bottom-0 left-0 w-full px-6 md:px-12 pb-8 max-w-7xl mx-auto z-10">
@@ -110,16 +113,16 @@ export default function GameDetails() {
         </div>
       </div>
 
-      {/* אזור התוכן */}
       <div className="px-6 md:px-12 pt-8 max-w-7xl mx-auto flex flex-col md:flex-row gap-12 relative z-20">
-        {/* עמודה מרכזית: תיאור */}
-        <div className="flex-1">
-          <h2 className="text-2xl text-[#8ab4f8] font-bold mb-4 border-b border-[#5f6368] pb-2">
+        
+        {/* עמודה מרכזית - התוכן עצמו */}
+        {/* שינוי למובייל: order-2 כדי שיופיע אחרי התפריט במסכים קטנים */}
+        <div className="flex-1 order-2 md:order-1">
+          <h2 className="text-2xl text-[#8ab4f8] font-bold mb-4 border-b border-[#5f6368]/30 pb-2">
             About the Game
           </h2>
 
           <div className="text-[#e8eaed] text-lg leading-relaxed space-y-4">
-            {/* RAWG מחזיר לפעמים תיאור נקי ב-description_raw ולפעמים HTML ב-description */}
             {game.description_raw ? (
               <p className="whitespace-pre-line">{game.description_raw}</p>
             ) : (
@@ -132,16 +135,28 @@ export default function GameDetails() {
               />
             )}
           </div>
+
+          <div id="reviews-section" className="mt-16 pt-8 border-t border-[#5f6368]/30">
+            <h2 className="text-2xl text-[#8ab4f8] font-bold mb-2">
+              Hardware-Matched Reviews
+            </h2>
+            <p className="text-[#9aa0a6] mb-8">
+              See how this game runs for players with a PC setup similar to yours!
+            </p>
+            
+            <GameReviews gameId={gameId} />
+            
+          </div>
         </div>
 
-        {/* עמודה צדדית: פעולות (סטיקי - יורד עם הגלילה) */}
-        <div className="w-full md:w-80 flex flex-col gap-6">
-          <div className="bg-[#303134] p-6 rounded-2xl border border-[#5f6368] shadow-xl sticky top-24">
-            <h3 className="text-[#e8eaed] text-xl font-medium mb-6 text-center">
+        {/* עמודה צדדית - תפריט הכפתורים */}
+        {/* שינוי למובייל: order-1 כדי שיופיע ראשון במסכים קטנים */}
+        <div className="w-full md:w-80 flex flex-col gap-6 order-1 md:order-2">
+          <div className="bg-[#28292c] p-6 rounded-2xl border border-white/5 shadow-2xl sticky top-24">
+            <h3 className="text-[#e8eaed] text-xl font-bold mb-6 text-center">
               Ready to play?
             </h3>
 
-            {/* הכפתור שמנווט לעמוד ה-Result לבדיקת המחשב */}
             <button
               onClick={() => navigate(`/game/${gameId}`)}
               className="w-full py-4 bg-[#34A853] hover:bg-[#2d9047] text-[#202124] rounded-xl font-bold text-lg transition-transform hover:scale-105 shadow-[0_0_15px_rgba(52,168,83,0.3)] mb-4"
@@ -150,8 +165,18 @@ export default function GameDetails() {
             </button>
 
             <button
+              onClick={scrollToReviews}
+              className="w-full py-3 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] rounded-xl font-bold transition-colors mb-4 flex items-center justify-center gap-2 shadow-md"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+              </svg>
+              Read / Write Reviews
+            </button>
+
+            <button
               onClick={() => navigate("/catalog")}
-              className="w-full py-3 border border-[#8ab4f8] text-[#8ab4f8] hover:bg-[#8ab4f8] hover:text-[#202124] rounded-xl font-bold transition-colors"
+              className="w-full py-3 border border-white/10 text-[#9aa0a6] hover:bg-white/5 hover:text-[#e8eaed] rounded-xl font-bold transition-colors"
             >
               Back to Catalog
             </button>

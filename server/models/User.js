@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // ✨ התיקון: הפונקציה כבר לא מקבלת next, ובמקום return next() יש רק return ✨
