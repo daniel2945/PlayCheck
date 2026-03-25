@@ -57,59 +57,68 @@ export default function PcSetup() {
       navigate("/catalog");
     }, 1500);
   };
-
   return (
-    <div className="flex flex-col items-center pt-16 sm:pt-24 px-4 min-h-screen">
-      <h2 className="text-2xl sm:text-3xl text-[#e8eaed] mb-8 sm:mb-10 text-center">
-        Set Up Your PC Specs
-      </h2>
-      <div className="w-full max-w-2xl space-y-6">
-        <HardwareInput
-          type="CPU"
-          placeholder="Search CPU (e.g. i7 13700K)..."
-          onSelect={setCpu}
-        />
+    <div className="relative w-full min-h-screen">
+      {/* אזור הרקע עם התמונה והטשטוש */}
+      <div
+        className="absolute top-0 left-0 w-full h-[55vh] bg-cover bg-center bg-no-repeat z-0 pointer-events-none"
+        style={{ backgroundImage: "url('/setup-bg.jpg')" }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#202124]/80 to-[#202124]"></div>
+      </div>
 
-        <HardwareInput
-          type="GPU"
-          placeholder="Search GPU (e.g. RTX 4070)..."
-          onSelect={setGpu}
-        />
-
-        <div className="bg-[#303134] p-5 sm:p-7 rounded-3xl border border-[#5f6368]">
-          <div className="flex justify-between mb-4 text-[#e8eaed]">
-            <span>System RAM:</span>
-            <span className="text-[#8ab4f8] font-bold">{ram} GB</span>
-          </div>
-          <input
-            type="range"
-            min="4"
-            max="128"
-            step="4"
-            value={ram}
-            onChange={(e) => setRam(Number(e.target.value))}
-            className="w-full h-1.5 bg-[#5f6368] rounded-lg appearance-none cursor-pointer accent-[#8ab4f8]"
+      <div className="relative z-10 flex flex-col items-center pt-16 sm:pt-24 px-4 min-h-screen w-full">
+        <h2 className="text-2xl sm:text-5xl text-white mb-6 sm:mb-8 font-bold text-center drop-shadow-[0_4px_4px_rgba(0,0,0,1)]">
+          Set Up Your PC Specs
+        </h2>
+        <div className="w-full max-w-2xl space-y-6">
+          <HardwareInput
+            type="CPU"
+            placeholder="Search CPU (e.g. i7 13700K)..."
+            onSelect={setCpu}
           />
-          <div className="flex justify-between text-xs text-[#9aa0a6] mt-3">
-            <span>4GB</span>
-            <span>128GB</span>
-          </div>
-        </div>
 
-        <div className="flex flex-col items-center mt-8 space-y-4">
-          {saveMessage && (
-            <div
-              className={`text-sm font-medium px-4 py-2 rounded-full border bg-[#303134] text-[#e8eaed] ${saveMessage.includes("⚠️") ? "border-[#EA4335]" : "border-[#34A853]"}`}
-            >
-              {saveMessage}
+          <HardwareInput
+            type="GPU"
+            placeholder="Search GPU (e.g. RTX 4070)..."
+            onSelect={setGpu}
+          />
+
+          <div className="bg-[#303134]/90 backdrop-blur-sm p-5 sm:p-7 rounded-3xl border border-[#5f6368] shadow-lg">
+            <div className="flex justify-between mb-4 text-[#e8eaed]">
+              <span>System RAM:</span>
+              <span className="text-[#8ab4f8] font-bold">{ram} GB</span>
             </div>
-          )}
-          <button
-            onClick={handleSaveAndAnalyze}
-            className="bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] px-8 py-3 rounded-full font-bold transition-colors"
-          >
-            Save & Browse Games
-          </button>
+            <input
+              type="range"
+              min="4"
+              max="128"
+              step="4"
+              value={ram}
+              onChange={(e) => setRam(Number(e.target.value))}
+              className="w-full h-1.5 bg-[#5f6368] rounded-lg appearance-none cursor-pointer accent-[#8ab4f8]"
+            />
+            <div className="flex justify-between text-xs text-[#9aa0a6] mt-3">
+              <span>4GB</span>
+              <span>128GB</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center mt-8 space-y-4">
+            {saveMessage && (
+              <div
+                className={`text-sm font-medium px-4 py-2 rounded-full border bg-[#303134] text-[#e8eaed] shadow-md ${saveMessage.includes("⚠️") ? "border-[#EA4335]" : "border-[#34A853]"}`}
+              >
+                {saveMessage}
+              </div>
+            )}
+            <button
+              onClick={handleSaveAndAnalyze}
+              className="bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] px-8 py-3 rounded-full font-bold transition-colors shadow-lg"
+            >
+              Save & Browse Games
+            </button>
+          </div>
         </div>
       </div>
     </div>
