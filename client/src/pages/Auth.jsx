@@ -44,7 +44,10 @@ export default function Auth() {
       const data = await API_CALL(endpoint, "POST", payload);
 
       if (!isLoginView) {
-        setMessage({ text: "Registration successful! Please login.", type: "success" });
+        setMessage({
+          text: "Registration successful! Please login.",
+          type: "success",
+        });
         setTimeout(() => {
           setIsLoginView(true);
           setConfirmPassword("");
@@ -57,29 +60,33 @@ export default function Auth() {
         }
       }
     } catch (err) {
-      setMessage({ 
-        text: err.message || "Authentication failed", 
-        type: "error" 
+      setMessage({
+        text: err.message || "Authentication failed",
+        type: "error",
       });
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 text-center pt-24">
-      <div className="bg-[#303134] p-8 rounded-xl shadow-xl border border-[#5f6368] w-full max-w-sm">
+    <div className="flex flex-col items-center justify-center p-4 sm:p-6 text-center pt-16 sm:pt-24">
+      <div className="bg-[#303134] p-6 sm:p-8 rounded-xl shadow-xl border border-[#5f6368] w-full max-w-sm">
         <h2 className="text-2xl font-medium mb-6 text-[#e8eaed]">
           {isLoginView ? (isAdminLogin ? "Admin Login" : "Login") : "Register"}
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {message.text && (
-            <div className={`p-3 rounded-lg text-sm font-medium border ${
-              message.type === "error" ? "text-[#EA4335] border-[#EA4335]" : "text-[#34A853] border-[#34A853]"
-            }`}>
+            <div
+              className={`p-3 rounded-lg text-sm font-medium border ${
+                message.type === "error"
+                  ? "text-[#EA4335] border-[#EA4335]"
+                  : "text-[#34A853] border-[#34A853]"
+              }`}
+            >
               {message.text}
             </div>
           )}
-          
+
           {!isLoginView && (
             <input
               type="text"
@@ -106,7 +113,7 @@ export default function Auth() {
             onChange={(e) => setPassword(e.target.value)}
             className="p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] focus:outline-none focus:border-[#8ab4f8]"
           />
-          
+
           {!isLoginView && (
             <input
               type="password"
@@ -167,7 +174,9 @@ export default function Auth() {
               setMessage({ text: "", type: "" });
             }}
           >
-            {isLoginView ? "Don't have an account? Register" : "Already have an account? Login"}
+            {isLoginView
+              ? "Don't have an account? Register"
+              : "Already have an account? Login"}
           </p>
         </div>
       </div>

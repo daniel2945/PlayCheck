@@ -6,13 +6,14 @@ export default function Home() {
   const user = useAuthStore((state) => state.user);
 
   return (
-    <div className="flex flex-col items-center justify-center pt-32 px-4 text-center">
-      <h1 className="text-5xl sm:text-6xl font-bold mb-6 text-[#e8eaed] tracking-tight">
+    <div className="flex flex-col items-center justify-center pt-20 sm:pt-32 px-4 text-center">
+      <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 sm:mb-6 text-[#e8eaed] tracking-tight">
         Can You Run It?
       </h1>
       <p className="text-xl text-[#9aa0a6] mb-12 max-w-2xl">
-        Check if your PC meets the hardware requirements for the latest and greatest games. 
-        Browse our catalog, set up your specs, and let our AI do the rest.
+        Check if your PC meets the hardware requirements for the latest and
+        greatest games. Browse our catalog, set up your specs, and let our AI do
+        the rest.
       </p>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -22,7 +23,7 @@ export default function Home() {
         >
           Browse Games
         </Link>
-        
+
         <Link
           to="/setup"
           className="bg-[#303134] hover:bg-[#3c4043] border border-[#5f6368] text-[#e8eaed] font-medium px-8 py-3 rounded-full transition-colors"

@@ -10,7 +10,7 @@ export default function Settings() {
 
   // סטייטים לפרופיל
   const [userName, setUserName] = useState(user?.userName || "");
-  
+
   // סטייטים לסיסמה
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -27,18 +27,23 @@ export default function Settings() {
     setStatus({ type: "", message: "" });
 
     try {
-      // כאן תצטרך לוודא שיש לך ראוט בשרת שמקבל את השם החדש
-      const data = await API_CALL(`/api/auth/${user._id}/name`, "PUT", { 
-        userName: userName 
+      const data = await API_CALL("/api/auth/me/name", "PUT", {
+        userName: userName,
       });
 
       if (data.success) {
-        setStatus({ type: "success", message: "Profile updated successfully!" });
+        setStatus({
+          type: "success",
+          message: "Profile updated successfully!",
+        });
         // מעדכנים את ה-Store המקומי
         setAuth({ ...user, userName }, token);
       }
     } catch (err) {
-      setStatus({ type: "error", message: err.message || "Failed to update profile." });
+      setStatus({
+        type: "error",
+        message: err.message || "Failed to update profile.",
+      });
     } finally {
       setLoading(false);
     }
@@ -56,20 +61,25 @@ export default function Settings() {
 
     setLoading(true);
     try {
-      // כאן תצטרך ראוט שבודק את currentPassword לפני שהוא מעדכן ל-newPassword
-      const data = await API_CALL(`/api/auth/${user._id}/change-password`, "PUT", {
+      const data = await API_CALL("/api/auth/me/password", "PUT", {
         currentPassword,
-        newPassword
+        password: newPassword,
       });
 
       if (data.success) {
-        setStatus({ type: "success", message: "Password changed successfully!" });
+        setStatus({
+          type: "success",
+          message: "Password changed successfully!",
+        });
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       }
     } catch (err) {
-      setStatus({ type: "error", message: err.message || "Failed to change password." });
+      setStatus({
+        type: "error",
+        message: err.message || "Failed to change password.",
+      });
     } finally {
       setLoading(false);
     }
@@ -78,7 +88,7 @@ export default function Settings() {
   // --- מחיקת חשבון ---
   const handleDeleteAccount = async () => {
     const confirmDelete = window.confirm(
-      "Are you absolutely sure you want to delete your account? This action cannot be undone and your PC specs will be lost."
+      "Are you absolutely sure you want to delete your account? This action cannot be undone and your PC specs will be lost.",
     );
 
     if (!confirmDelete) return;
@@ -94,32 +104,37 @@ export default function Settings() {
   };
 
   return (
-    <div className="pt-24 px-6 max-w-4xl mx-auto min-h-screen pb-12 w-full">
-      <h1 className="text-3xl font-bold text-[#e8eaed] mb-8 border-b border-[#303134] pb-4">
+    <div className="pt-16 sm:pt-24 px-4 sm:px-6 max-w-4xl mx-auto min-h-screen pb-12 w-full">
+      <h1 className="text-2xl sm:text-3xl font-bold text-[#e8eaed] mb-6 sm:mb-8 border-b border-[#303134] pb-4 text-center sm:text-left">
         Account Settings
       </h1>
 
       {/* אזור הודעות משותף */}
       {status.message && (
-        <div className={`p-4 rounded-xl mb-8 font-medium border ${
-          status.type === "success" 
-            ? "bg-[#34A853]/10 border-[#34A853] text-[#81c995]" 
-            : "bg-[#EA4335]/10 border-[#EA4335] text-[#f28b82]"
-        }`}>
+        <div
+          className={`p-4 rounded-xl mb-8 font-medium border ${
+            status.type === "success"
+              ? "bg-[#34A853]/10 border-[#34A853] text-[#81c995]"
+              : "bg-[#EA4335]/10 border-[#EA4335] text-[#f28b82]"
+          }`}
+        >
           {status.message}
         </div>
       )}
 
       <div className="space-y-8">
-        
         {/* =========================================
             כרטיסיית פרטי פרופיל
         ========================================= */}
         <section className="bg-[#303134] rounded-2xl p-6 md:p-8 border border-[#5f6368] shadow-lg">
-          <h2 className="text-xl font-semibold text-[#8ab4f8] mb-6">Profile Information</h2>
+          <h2 className="text-xl font-semibold text-[#8ab4f8] mb-6">
+            Profile Information
+          </h2>
           <form onSubmit={handleUpdateProfile} className="flex flex-col gap-5">
             <div>
-              <label className="block text-[#9aa0a6] text-sm mb-2">Display Name</label>
+              <label className="block text-[#9aa0a6] text-sm mb-2">
+                Display Name
+              </label>
               <input
                 type="text"
                 required
@@ -128,9 +143,11 @@ export default function Settings() {
                 className="w-full p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8] transition-colors"
               />
             </div>
-            
+
             <div>
-              <label className="block text-[#9aa0a6] text-sm mb-2">Email Address</label>
+              <label className="block text-[#9aa0a6] text-sm mb-2">
+                Email Address
+              </label>
               <input
                 type="email"
                 disabled
@@ -138,12 +155,14 @@ export default function Settings() {
                 className="w-full p-3 rounded-lg bg-[#202124] text-[#5f6368] border border-[#3c4043] cursor-not-allowed"
                 title="Email cannot be changed directly"
               />
-              <p className="text-xs text-[#5f6368] mt-2">Email change requires administrator assistance.</p>
+              <p className="text-xs text-[#5f6368] mt-2">
+                Email change requires administrator assistance.
+              </p>
             </div>
 
             <div className="flex justify-end mt-2">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="px-6 py-2.5 bg-[#8ab4f8] text-[#202124] font-bold rounded-lg hover:bg-[#aecbfa] transition-colors disabled:opacity-50"
               >
@@ -157,10 +176,14 @@ export default function Settings() {
             כרטיסיית אבטחה (סיסמה)
         ========================================= */}
         <section className="bg-[#303134] rounded-2xl p-6 md:p-8 border border-[#5f6368] shadow-lg">
-          <h2 className="text-xl font-semibold text-[#8ab4f8] mb-6">Security</h2>
+          <h2 className="text-xl font-semibold text-[#8ab4f8] mb-6">
+            Security
+          </h2>
           <form onSubmit={handleUpdatePassword} className="flex flex-col gap-5">
             <div>
-              <label className="block text-[#9aa0a6] text-sm mb-2">Current Password</label>
+              <label className="block text-[#9aa0a6] text-sm mb-2">
+                Current Password
+              </label>
               <input
                 type="password"
                 required
@@ -169,10 +192,12 @@ export default function Settings() {
                 className="w-full p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8] transition-colors"
               />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-[#9aa0a6] text-sm mb-2">New Password</label>
+                <label className="block text-[#9aa0a6] text-sm mb-2">
+                  New Password
+                </label>
                 <input
                   type="password"
                   required
@@ -183,7 +208,9 @@ export default function Settings() {
                 />
               </div>
               <div>
-                <label className="block text-[#9aa0a6] text-sm mb-2">Confirm New Password</label>
+                <label className="block text-[#9aa0a6] text-sm mb-2">
+                  Confirm New Password
+                </label>
                 <input
                   type="password"
                   required
@@ -196,8 +223,8 @@ export default function Settings() {
             </div>
 
             <div className="flex justify-end mt-2">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="px-6 py-2.5 bg-[#8ab4f8] text-[#202124] font-bold rounded-lg hover:bg-[#aecbfa] transition-colors disabled:opacity-50"
               >
@@ -211,18 +238,20 @@ export default function Settings() {
             כרטיסיית סכנה (מחיקה)
         ========================================= */}
         <section className="bg-[#202124] rounded-2xl p-6 md:p-8 border border-[#EA4335]/30">
-          <h2 className="text-xl font-semibold text-[#EA4335] mb-4">Danger Zone</h2>
+          <h2 className="text-xl font-semibold text-[#EA4335] mb-4">
+            Danger Zone
+          </h2>
           <p className="text-[#9aa0a6] mb-6">
-            Once you delete your account, there is no going back. Please be certain.
+            Once you delete your account, there is no going back. Please be
+            certain.
           </p>
-          <button 
+          <button
             onClick={handleDeleteAccount}
             className="px-6 py-2.5 border border-[#EA4335] text-[#EA4335] font-bold rounded-lg hover:bg-[#EA4335] hover:text-white transition-colors"
           >
             Delete Account
           </button>
         </section>
-
       </div>
     </div>
   );

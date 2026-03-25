@@ -68,39 +68,49 @@ const formatRam = (ramGb) => {
 
 const searchGames = async (req, res, next) => {
   try {
-    const { q, year, page } = req.query; // שליפה מסודרת
+    // ✨ הוספנו פה את genre לשליפה ✨
+    const { q, year, page, sort, genre } = req.query;
 
-    // לוג לבדיקה - תסתכל בטרמינל של השרת כשאתה לוחץ Show More
-    console.log(`[SEARCH DEBUG] Query: ${q}, Year: ${year}, Page: ${page}`);
+    console.log(`[SEARCH DEBUG] Query: ${q}, Year: ${year}, Genre: ${genre}, Page: ${page}`);
 
     const params = {
-      key: apiKey,
+      key: apiKey, // ודא שהמשתנה הזה מוגדר אצלך בקובץ כמו קודם
       page: page || 1,
       page_size: 12,
     };
 
-    // אם המשתמש הקליד משהו בחיפוש - נחפש אותו
+    // אם חיפשנו מילה - נותנים ל-RAWG לחפש התאמה מדויקת (בלי למיין)
     if (q && q.trim() !== "" && q !== "popular") {
       params.search = q;
     } else {
-      // אם אין מילת חיפוש (קריאה רגילה של הקטלוג או רק סינון שנה)
-      // נבקש מ-RAWG למיין את התוצאות לפי כמות הוספות (פופולריות אמיתית)
+      // אם אין חיפוש (קטלוג רגיל) - נמיין לפי הכי פופולרי
       params.ordering = "-added";
     }
 
+    // תמיכה במיון דינמי (כדי להציג תוצאות טובות יותר בחיפוש ב-Navbar)
+    if (sort) {
+      params.ordering = sort;
+    }
+
     if (year) params.dates = `${year}-01-01,${year}-12-31`;
+    
+    // ✨ הוספנו את הסינון לפי ז'אנר ✨
+    if (genre) params.genres = genre;
 
     const response = await axios.get("https://api.rawg.io/api/games", {
       params,
     });
-    // לוג לבדיקה - האם RAWG אומר שיש עוד עמוד?
+
     console.log(`[RAWG DEBUG] Has Next: ${!!response.data.next}`);
 
     const games = response.data.results.map((game) => ({
+      _id: game.id, // קריטי עבור הלחיצה ב-Navbar
       rawgId: game.id,
       name: game.name,
+      title: game.name, // קריטי לאחידות בתצוגה
       image: game.background_image,
       releasedDate: game.released,
+      metacritic: game.metacritic,
     }));
 
     res.status(200).json({
@@ -126,9 +136,12 @@ const searchGame = async (req, res, next) => {
   }
 };
 
+
 const createGame = async (req, res, next) => {
   try {
-const { _id, title, image, description, releasedDate, requirements } = req.body;    const { cpuList, gpuList } = hardwareCache;
+    const { _id, title, image, description, releasedDate, requirements } =
+      req.body;
+    const { cpuList, gpuList } = hardwareCache;
     const minimum = await parseGameRequirements(
       requirements.minimum,
       cpuList,
@@ -513,15 +526,13 @@ const checkCompatibilityUser = async (req, res, next) => {
     if (grades.includes("weak")) overallGrade = "weak";
     else if (grades.includes("okay")) overallGrade = "okay";
 
-
-    
     currentUser.searchHistory = currentUser.searchHistory.filter(
-      (item) => item.gameId.toString() !== gameId.toString()
+      (item) => item.gameId.toString() !== gameId.toString(),
     );
 
-    currentUser.searchHistory.unshift({ 
-      gameId: game._id, 
-      searchedAt: Date.now() 
+    currentUser.searchHistory.unshift({
+      gameId: game._id,
+      searchedAt: Date.now(),
     });
 
     if (currentUser.searchHistory.length > 10) {
@@ -529,7 +540,6 @@ const checkCompatibilityUser = async (req, res, next) => {
     }
 
     await currentUser.save();
-    
 
     res.status(200).json({
       success: true,
