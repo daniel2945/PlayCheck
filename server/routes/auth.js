@@ -7,15 +7,19 @@ const {
   deleteUser,
   getAllUsers,
   getUser,
-  updateEmail,
-  updateName,
-  updatePassword,
   changeRole,
+  updateOwnName,
+  updateOwnEmail,
+  updateOwnPassword,
+  adminUpdateUserName,
+  adminUpdateUserEmail,
+  adminUpdateUserPassword
 } = require("../controllers/auth");
-const { verifyToken, forAdmins } = require("../middlewares/auth");
+
+// ייבוא כל המידלווארים כולל checkHierarchy החדש
+const { verifyToken, forAdmins, forOwner, checkHierarchy } = require("../middlewares/auth");
 const { validate } = require("../middlewares/validate");
 
-// --- ייבוא Zod ---
 const {
   registerSchema,
   loginSchema,
@@ -25,35 +29,34 @@ const {
   updateRoleSchema,
 } = require("../utils/validatorSchema");
 
-// --- נתיבי התחברות והרשמה ---
+// --- Auth & Registration ---
 authRouter.post("/register", validate(registerSchema), register);
 authRouter.post("/login", validate(loginSchema), login);
 authRouter.post("/google", googleLogin);
 
-// --- נתיבי משתמש מחובר (דורש טוקן) ---
+// ==========================================
+// USER ROUTES (משתמש משנה את עצמו)
+// ==========================================
 authRouter.use("/me", verifyToken);
 
 authRouter.get("/me", getUser);
-authRouter.put("/me/email", validate(updateEmailSchema), updateEmail);
-authRouter.put("/me/name", validate(updateNameSchema), updateName);
-authRouter.put("/me/password", validate(updatePasswordSchema), updatePassword);
+authRouter.put("/me/email", validate(updateEmailSchema), updateOwnEmail);
+authRouter.put("/me/name", validate(updateNameSchema), updateOwnName);
+authRouter.put("/me/password", validate(updatePasswordSchema), updateOwnPassword);
 
-// --- נתיבי ניהול (Admins Only) ---
-authRouter.route("/").get(verifyToken, forAdmins, getAllUsers);
+// ==========================================
+// ADMIN / OWNER ROUTES (פעולות ניהוליות)
+// ==========================================
+authRouter.get("/", verifyToken, forAdmins, getAllUsers);
 
-authRouter.route("/:id").delete(verifyToken, forAdmins, deleteUser);
+// מחיקה ועדכון על ידי מנהל - הכל עובר דרך checkHierarchy קודם!
+authRouter.delete("/:id", verifyToken, forAdmins, checkHierarchy, deleteUser);
 
-authRouter
-  .route("/:id/password")
-  .put(verifyToken, forAdmins, validate(updatePasswordSchema), updatePassword);
-authRouter
-  .route("/:id/name")
-  .put(verifyToken, forAdmins, validate(updateNameSchema), updateName);
-authRouter
-  .route("/:id/email")
-  .put(verifyToken, forAdmins, validate(updateEmailSchema), updateEmail);
-authRouter
-  .route("/:id/role")
-  .put(verifyToken, forAdmins, validate(updateRoleSchema), changeRole);
+authRouter.put("/:id/password", verifyToken, forAdmins, checkHierarchy, validate(updatePasswordSchema), adminUpdateUserPassword);
+authRouter.put("/:id/name", verifyToken, forAdmins, checkHierarchy, validate(updateNameSchema), adminUpdateUserName);
+authRouter.put("/:id/email", verifyToken, forAdmins, checkHierarchy, validate(updateEmailSchema), adminUpdateUserEmail);
+
+// Owner בלבד - שינוי הרשאות (כאן לא צריך checkHierarchy כי רק לבעלים מותר לשנות לכולם)
+authRouter.put("/:id/role", verifyToken, forOwner, validate(updateRoleSchema), changeRole);
 
 module.exports = authRouter;

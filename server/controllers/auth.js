@@ -1,266 +1,215 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Hardware = require("../models/Hardware");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const Hardware = require("../models/Hardware");
 
 const register = async (req, res, next) => {
-  console.log("[REGISTER DEBUG] Received request with body:", req.body);
   try {
     const { email, password, userName, myPc } = req.body;
-    
     const isExist = await User.findOne({ email });
     if (isExist) {
-      console.log("[REGISTER DEBUG] User already exists");
-      return res.status(400).json({ success: false, data: "user already exsits" });
+      return res.status(400).json({ success: false, data: "User already exists" });
     }
 
     const defaultCpu = await Hardware.findOne({ type: "CPU" });
     const defaultGpu = await Hardware.findOne({ type: "GPU" });
-
     if (!defaultCpu || !defaultGpu) {
       return res.status(500).json({ success: false, data: "Default hardware not found" });
     }
 
     const newUser = new User({
-      userName,
-      password, 
-      email,
-      myPc: {
-        cpuId: defaultCpu._id,
-        gpuId: defaultGpu._id,
-        ramGb: Number(myPc.ramGb),
-      },
+      userName, password, email, role: "user",
+      myPc: { cpuId: defaultCpu._id, gpuId: defaultGpu._id, ramGb: Number(myPc.ramGb) },
     });
-    
+
     await newUser.save();
-    console.log("[REGISTER DEBUG] User created successfully");
-    
     res.status(201).json({
       success: true,
-      data: "user created successfully",
+      data: "User created successfully",
       user: { id: newUser._id, userName: newUser.userName },
     });
-  } catch (err) {
-    console.error("[REGISTER ERROR DEBUG]", err);
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 const login = async (req, res, next) => {
   try {
     const { password, email } = req.body;
-    console.log(`[LOGIN DEBUG] Attempting login for email: ${email}`);
+    const user = await User.findOne({ email }).populate("myPc.cpuId").populate("myPc.gpuId");
 
-    const user = await User.findOne({ email })
-      .populate("myPc.cpuId")
-      .populate("myPc.gpuId");
+    if (!user) return res.status(400).json({ success: false, data: "User not found" });
 
-    if (!user) {
-      return res.status(400).json({ success: false, data: "user not found" });
-    }
-    
     const isVerified = await bcrypt.compare(password, user.password);
-    
-    if (!isVerified) {
-      return res.status(400).json({ success: false, data: "password is invalid" });
-    }
-    
+    if (!isVerified) return res.status(400).json({ success: false, data: "Invalid password" });
+
     const token = jwt.sign(
-      {
-        id: user._id,
-        userName: user.userName,
-        email: user.email,
-        isAdmin: user.isAdmin,
-      },
+      { id: user._id, userName: user.userName, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     const userResponse = user.toObject();
     delete userResponse.password;
-
-    res.status(200).json({
-      success: true,
-      token,
-      user: userResponse,
-    });
-  } catch (err) {
-    console.error("[LOGIN ERROR DEBUG]", err);
-    next(err);
-  }
+    res.status(200).json({ success: true, token, user: userResponse });
+  } catch (err) { next(err); }
 };
 
 const googleLogin = async (req, res, next) => {
   try {
     const { credential } = req.body;
-    if (!credential) {
-      return res.status(400).json({ success: false, data: "Google credential missing" });
-    }
+    if (!credential) return res.status(400).json({ success: false, data: "Google credential missing" });
 
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    const ticket = await client.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+    const { email, name, sub } = ticket.getPayload();
 
-    const payload = ticket.getPayload();
-    const { email, name, sub } = payload;
-
-    let user = await User.findOne({ email })
-      .populate("myPc.cpuId")
-      .populate("myPc.gpuId");
+    let user = await User.findOne({ email }).populate("myPc.cpuId").populate("myPc.gpuId");
 
     if (!user) {
       const randomPassword = await bcrypt.hash(sub + process.env.JWT_SECRET, 10);
-      const newUser = new User({
-        userName: name,
-        email,
-        password: randomPassword,
-        myPc: {
-          cpuId: "000000000000000000000000",
-          gpuId: "000000000000000000000000",
-          ramGb: 16,
-        },
+      user = new User({
+        userName: name, email, password: randomPassword, role: "user",
+        myPc: { cpuId: "000000000000000000000000", gpuId: "000000000000000000000000", ramGb: 16 },
       });
-      await newUser.save();
-      user = newUser;
+      await user.save();
     }
 
     const token = jwt.sign(
-      { id: user._id, userName: user.userName, email: user.email, isAdmin: user.isAdmin },
+      { id: user._id, userName: user.userName, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     const userResponse = user.toObject();
     delete userResponse.password;
-
     res.status(200).json({ success: true, token, user: userResponse });
-  } catch (err) {
-    console.error("[GOOGLE LOGIN SERVER ERROR]", err);
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 const getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id)
-      .select("-password")
-      .populate("myPc.cpuId")
-      .populate("myPc.gpuId");
-    if (!user) {
-      return res.status(404).json({ success: false, data: "user not found" });
-    }
+    const user = await User.findById(req.user.id).select("-password").populate("myPc.cpuId").populate("myPc.gpuId");
+    if (!user) return res.status(404).json({ success: false, data: "User not found" });
     res.status(200).json({ success: true, data: user });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 const getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find().select("-password");
-    if (!users) {
-      return res.status(404).json({ success: false, data: "users not found" });
-    }
+    if (!users) return res.status(404).json({ success: false, data: "Users not found" });
     res.status(200).json({ success: true, data: users });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
+
+// --- פונקציות שהמשתמש מעדכן לעצמו (Me) ---
+
+const updateOwnPassword = async (req, res, next) => {
+  try {
+    const { currentPassword, password } = req.body; 
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, data: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(401).json({ success: false, error: "Invalid current password" });
+
+    user.password = password;
+    await user.save();
+    res.status(200).json({ success: true, data: "Password updated successfully" });
+  } catch (err) { next(err); }
+};
+
+const updateOwnName = async (req, res, next) => {
+  try {
+    const { userName } = req.body;
+    const isExist = await User.findOne({ userName, _id: { $ne: req.user.id } });
+    if (isExist) return res.status(400).json({ success: false, error: "Username already exists" });
+
+    const updatedUser = await User.findByIdAndUpdate(req.user.id, { userName }, { new: true, runValidators: true });
+    res.status(200).json({ success: true, data: `Name updated to ${updatedUser.userName}` });
+  } catch (err) { next(err); }
+};
+
+const updateOwnEmail = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!password) return res.status(400).json({ success: false, error: "Password is required to change email" });
+
+    const user = await User.findById(req.user.id);
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ success: false, error: "Invalid password" });
+
+    const isExist = await User.findOne({ email, _id: { $ne: req.user.id } });
+    if (isExist) return res.status(400).json({ success: false, error: "Email already exists" });
+
+    user.email = email;
+    await user.save();
+    res.status(200).json({ success: true, data: `Email updated to ${user.email}` });
+  } catch (err) { next(err); }
+};
+
+// ==========================================
+// ADMIN/OWNER UPDATING OTHERS 
+// כל אלו משתמשים ב- req.targetUser שהגיע מהמידלוואר!
+// ==========================================
 
 const deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
-    if (!user) {
-      return res.status(404).json({ success: false, data: "user not found" });
-    }
-    res.status(200).json({
-      success: true,
-      data: `the user: ${user.userName} deleted successfully`,
-    });
-  } catch (err) {
-    next(err);
-  }
+    // מוחקים מיד, המידלוואר כבר וידא הכל!
+    await User.findByIdAndDelete(req.targetUser._id);
+    res.status(200).json({ success: true, data: `The user ${req.targetUser.userName} was deleted successfully` });
+  } catch (err) { next(err); }
 };
 
-// ==========================================
-// פונקציות מאוחדות (עובדות גם למשתמש וגם למנהל)
-// ==========================================
-
-const updatePassword = async (req, res, next) => {
+const adminUpdateUserPassword = async (req, res, next) => {
   try {
     const { password } = req.body;
-    const targetId = req.params.id || req.user.id; // בוחר אוטומטית על מי לעבוד
+    const targetUser = req.targetUser;
 
-    const user = await User.findById(targetId);
-    if (!user) {
-      return res.status(404).json({ success: false, data: "user not found" });
-    }
-    
-    user.password = password;
-    await user.save();
-    
-    res.status(200).json({ success: true, data: "password updated" });
-  } catch (err) {
-    next(err);
-  }
+    targetUser.password = password;
+    await targetUser.save();
+    res.status(200).json({ success: true, data: "User password updated successfully" });
+  } catch (err) { next(err); }
 };
 
-const updateName = async (req, res, next) => {
+const adminUpdateUserName = async (req, res, next) => {
   try {
     const { userName } = req.body;
-    const targetId = req.params.id || req.user.id;
+    const targetUser = req.targetUser;
 
-    const isExist = await User.findOne({ userName, _id: { $ne: targetId } });
-    if (isExist) {
-      return res.status(400).json({ success: false, error: "Username already exists" });
-    }
-    
-    const updatedUser = await User.findByIdAndUpdate(
-      targetId,
-      { userName },
-      { new: true, runValidators: true }
-    );
-    res.status(200).json({ success: true, data: `name updated to ${updatedUser.userName}` });
-  } catch (err) {
-    next(err);
-  }
+    const isExist = await User.findOne({ userName, _id: { $ne: targetUser._id } });
+    if (isExist) return res.status(400).json({ success: false, error: "Username already taken by another user" });
+
+    targetUser.userName = userName;
+    await targetUser.save();
+    res.status(200).json({ success: true, data: `User name updated to ${targetUser.userName}` });
+  } catch (err) { next(err); }
 };
 
-const updateEmail = async (req, res, next) => {
+const adminUpdateUserEmail = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const targetId = req.params.id || req.user.id;
+    const targetUser = req.targetUser;
 
-    const isExist = await User.findOne({ email, _id: { $ne: targetId } });
-    if (isExist) {
-      return res.status(400).json({ success: false, error: "email already exists" });
-    }
-    
-    const updatedUser = await User.findByIdAndUpdate(
-      targetId,
-      { email },
-      { new: true, runValidators: true }
-    );
-    res.status(200).json({ success: true, data: `email updated to ${updatedUser.email}` });
-  } catch (err) {
-    next(err);
-  }
+    const isExist = await User.findOne({ email, _id: { $ne: targetUser._id } });
+    if (isExist) return res.status(400).json({ success: false, error: "Email already taken by another user" });
+
+    targetUser.email = email;
+    await targetUser.save();
+    res.status(200).json({ success: true, data: `User email updated to ${targetUser.email}` });
+  } catch (err) { next(err); }
 };
 
 const changeRole = async (req, res, next) => {
   try {
+    // הפונקציה הזו פתוחה רק ל-Owner דרך המידלוואר forOwner, אז אין צורך לבדוק שוב
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { isAdmin: req.body.isAdmin },
-      { new: true }
+      { role: req.body.role },
+      { new: true, select: "-password" }
     );
     res.status(200).json({ success: true, data: updatedUser });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 module.exports = {
@@ -270,8 +219,11 @@ module.exports = {
   deleteUser,
   getAllUsers,
   getUser,
-  updateEmail,
-  updateName,
-  updatePassword,
   changeRole,
+  updateOwnName,
+  updateOwnEmail,
+  updateOwnPassword,
+  adminUpdateUserName,
+  adminUpdateUserEmail,
+  adminUpdateUserPassword
 };

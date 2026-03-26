@@ -5,9 +5,11 @@ import toast from "react-hot-toast";
 
 export default function AdminDashboard() {
   const currentUser = useAuthStore((state) => state.user);
+  const isOwner = currentUser?.role === "owner";
+  const isAdmin = currentUser?.role === "admin" || isOwner;
 
   const [activeTab, setActiveTab] = useState("users");
-
+  
   // נתונים
   const [users, setUsers] = useState([]);
   const [games, setGames] = useState([]);
@@ -38,7 +40,7 @@ export default function AdminDashboard() {
     benchmarkScore: 0,
   });
 
-  // טופס משחקים - כולל releasedDate
+  // טופס משחקים
   const defaultGameForm = {
     _id: "",
     title: "",
@@ -58,12 +60,13 @@ export default function AdminDashboard() {
   };
   const [gameForm, setGameForm] = useState(defaultGameForm);
 
-  // טופס משתמשים (כולל סיסמה)
+  // טופס משתמשים 
+  const [originalUser, setOriginalUser] = useState(null); // שומר את המצב המקורי כדי לעדכן רק מה שהשתנה
   const [userForm, setUserForm] = useState({
     _id: "",
     userName: "",
     email: "",
-    isAdmin: false,
+    role: "user",
     newPassword: "",
   });
 
@@ -134,11 +137,12 @@ export default function AdminDashboard() {
   };
 
   const openUserModal = (user) => {
+    setOriginalUser(user);
     setUserForm({
       _id: user._id,
       userName: user.userName,
       email: user.email,
-      isAdmin: user.isAdmin,
+      role: user.role || "user",
       newPassword: "",
     });
     setIsUserModalOpen(true);
@@ -146,39 +150,41 @@ export default function AdminDashboard() {
 
   const handleSaveUser = async (e) => {
     e.preventDefault();
+    const loadingToast = toast.loading("Updating user...");
+    
     try {
-      await API_CALL(`/api/auth/${userForm._id}/name`, "PUT", {
-        name: userForm.userName,
-        userName: userForm.userName,
-      });
-      await API_CALL(`/api/auth/${userForm._id}/email`, "PUT", {
-        email: userForm.email,
-      });
-      await API_CALL(`/api/auth/${userForm._id}/role`, "PUT", {
-        isAdmin: userForm.isAdmin,
-      });
+      let updatedData = { ...originalUser };
 
-      if (userForm.newPassword && userForm.newPassword.trim() !== "") {
-        await API_CALL(`/api/auth/${userForm._id}/password`, "PUT", {
-          password: userForm.newPassword,
-        });
+      // 1. עדכון שם משתמש (רק אם שונה)
+      if (userForm.userName !== originalUser.userName) {
+        await API_CALL(`/api/auth/${userForm._id}/name`, "PUT", { userName: userForm.userName });
+        updatedData.userName = userForm.userName;
       }
 
-      setUsers(
-        users.map((u) =>
-          u._id === userForm._id
-            ? {
-                ...u,
-                userName: userForm.userName,
-                email: userForm.email,
-                isAdmin: userForm.isAdmin,
-              }
-            : u,
-        ),
-      );
+      // 2. עדכון אימייל (רק אם שונה - מנהל ובעלים יכולים לעשות את זה)
+      if (userForm.email !== originalUser.email) {
+        await API_CALL(`/api/auth/${userForm._id}/email`, "PUT", { email: userForm.email });
+        updatedData.email = userForm.email;
+      }
+
+      // 3. עדכון סיסמה (רק אם הוזנה חדשה)
+      if (userForm.newPassword && userForm.newPassword.trim() !== "") {
+        await API_CALL(`/api/auth/${userForm._id}/password`, "PUT", { password: userForm.newPassword });
+      }
+
+      // 4. עדכון תפקיד (רק בעלים יכול)
+      if (isOwner && userForm.role !== originalUser.role) {
+        await API_CALL(`/api/auth/${userForm._id}/role`, "PUT", { role: userForm.role });
+        updatedData.role = userForm.role;
+      }
+
+      // עדכון הסטייט המקומי כך שלא נצטרך לרענן את העמוד
+      setUsers(users.map((u) => (u._id === userForm._id ? updatedData : u)));
+      
       setIsUserModalOpen(false);
+      toast.success("User updated successfully!", { id: loadingToast });
     } catch (err) {
-      toast.error("Failed to update user: " + err.message);
+      toast.error("Failed to update user: " + err.message, { id: loadingToast });
     }
   };
 
@@ -191,8 +197,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col gap-3">
           <p className="font-medium text-[#e8eaed]">
             Are you sure you want to delete{" "}
-            <span className="font-bold text-[#EA4335]">{title}</span> from the
-            DB?
+            <span className="font-bold text-[#EA4335]">{title}</span> from the DB?
           </p>
           <div className="flex gap-2 justify-end mt-2">
             <button
@@ -229,11 +234,8 @@ export default function AdminDashboard() {
       setGameForm({
         _id: game._id,
         title: game.title || "",
-        description:
-          game.description || "there is no description for this game",
-        image:
-          game.image ||
-          "https://placehold.co/600x400/1a1a1a/ffffff?text=No+Image+Available",
+        description: game.description || "there is no description for this game",
+        image: game.image || "https://placehold.co/600x400/1a1a1a/ffffff?text=No+Image+Available",
         releasedDate: game.releasedDate || "TBA",
         requirements: {
           minimum: {
@@ -263,29 +265,18 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       if (isEditingGame) {
-        const data = await API_CALL(
-          `/api/game/${gameForm._id}`,
-          "PUT",
-          gameForm,
-        );
+        const data = await API_CALL(`/api/game/${gameForm._id}`, "PUT", gameForm);
         if (data.success) {
-          setGames(
-            games.map((g) =>
-              g._id === gameForm._id ? { ...g, ...gameForm } : g,
-            ),
-          );
+          setGames(games.map((g) => (g._id === gameForm._id ? { ...g, ...gameForm } : g)));
         }
       } else {
-        const data = await API_CALL(
-          `/api/game/${gameForm._id}`,
-          "POST",
-          gameForm,
-        );
+        const data = await API_CALL(`/api/game/${gameForm._id}`, "POST", gameForm);
         if (data.success) {
           setGames([data.data || { ...gameForm }, ...games]);
         }
       }
       setIsGameModalOpen(false);
+      toast.success("Game saved successfully!");
     } catch (err) {
       toast.error("Failed to save game: " + err.message);
     }
@@ -346,18 +337,17 @@ export default function AdminDashboard() {
     e.preventDefault();
     try {
       if (isEditing) {
-        const data = await API_CALL(
-          `/api/hardware/${hardwareForm._id}`,
-          "PUT",
-          hardwareForm,
-        );
-        if (data.success)
-          setHardwares(
-            hardwares.map((h) => (h._id === hardwareForm._id ? data.data : h)),
-          );
+        const data = await API_CALL(`/api/hardware/${hardwareForm._id}`, "PUT", hardwareForm);
+        if (data.success) {
+          setHardwares(hardwares.map((h) => (h._id === hardwareForm._id ? data.data : h)));
+          toast.success("Hardware updated successfully");
+        }
       } else {
         const data = await API_CALL("/api/hardware", "POST", hardwareForm);
-        if (data.success) setHardwares([...hardwares, data.data]);
+        if (data.success) {
+          setHardwares([...hardwares, data.data]);
+          toast.success("Hardware added successfully");
+        }
       }
       setIsHardwareModalOpen(false);
     } catch (err) {
@@ -421,7 +411,12 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {users.map((u) => {
-                  const isOtherAdmin = u.isAdmin && u._id !== currentUser?._id;
+                  const isMe = u._id === currentUser?._id;
+                  
+                  // בדיקת היררכיה: מנהל יכול לערוך רק משתמשים. בעלים יכול הכל.
+                  const canManage = isOwner ? !isMe : (isAdmin && u.role === "user");
+                  const canDelete = isOwner ? !isMe : (isAdmin && u.role === "user");
+
                   return (
                     <tr
                       key={u._id}
@@ -430,33 +425,40 @@ export default function AdminDashboard() {
                       <td className="p-4 text-[#e8eaed]">{u.userName}</td>
                       <td className="p-4 text-[#9aa0a6]">{u.email}</td>
                       <td className="p-4">
-                        {u.isAdmin ? (
-                          <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold">
+                        {u.role === "owner" ? (
+                          <span className="bg-purple-200 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">
+                            Owner
+                          </span>
+                        ) : u.role === "admin" ? (
+                          <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold capitalize">
                             Admin
                           </span>
                         ) : (
-                          <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold">
+                          <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold capitalize">
                             User
                           </span>
                         )}
                       </td>
                       <td className="p-4 flex gap-4">
-                        {!isOtherAdmin ? (
+                        {isMe ? (
+                          <span className="text-[#8ab4f8] text-sm font-bold bg-[#8ab4f8]/10 px-3 py-1 rounded-full">It's You</span>
+                        ) : canManage ? (
                           <button
                             onClick={() => openUserModal(u)}
-                            className="text-[#8ab4f8] hover:underline"
+                            className="text-[#8ab4f8] hover:underline font-medium"
                           >
                             Edit
                           </button>
                         ) : (
-                          <span className="text-[#5f6368] text-sm cursor-not-allowed">
-                            Protected
+                          <span className="text-[#5f6368] text-sm cursor-not-allowed" title="You cannot modify this user">
+                            Restricted
                           </span>
                         )}
-                        {!u.isAdmin && (
+
+                        {canDelete && (
                           <button
                             onClick={() => handleDeleteUser(u._id, u.userName)}
-                            className="text-[#EA4335] hover:underline"
+                            className="text-[#EA4335] hover:underline font-medium"
                           >
                             Delete
                           </button>
@@ -472,7 +474,10 @@ export default function AdminDashboard() {
           {/* Mobile Card View */}
           <div className="flex flex-col md:hidden gap-4 w-full">
             {users.map((u) => {
-              const isOtherAdmin = u.isAdmin && u._id !== currentUser?._id;
+              const isMe = u._id === currentUser?._id;
+              const canManage = isOwner ? !isMe : (isAdmin && u.role === "user");
+              const canDelete = isOwner ? !isMe : (isAdmin && u.role === "user");
+
               return (
                 <div
                   key={u._id}
@@ -483,12 +488,16 @@ export default function AdminDashboard() {
                       {u.userName}
                     </span>
                     <span className="flex-shrink-0">
-                      {u.isAdmin ? (
-                        <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold">
+                      {u.role === "owner" ? (
+                        <span className="bg-purple-200 text-purple-800 px-3 py-1 rounded-full text-xs font-bold">
+                          Owner
+                        </span>
+                      ) : u.role === "admin" ? (
+                        <span className="bg-[#fce8e6] text-[#c5221f] px-3 py-1 rounded-full text-xs font-bold capitalize">
                           Admin
                         </span>
                       ) : (
-                        <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold">
+                        <span className="bg-[#e6f4ea] text-[#137333] px-3 py-1 rounded-full text-xs font-bold capitalize">
                           User
                         </span>
                       )}
@@ -498,7 +507,9 @@ export default function AdminDashboard() {
                     {u.email}
                   </div>
                   <div className="flex justify-between items-center pt-2 mt-auto">
-                    {!isOtherAdmin ? (
+                    {isMe ? (
+                      <span className="text-[#8ab4f8] text-sm font-bold bg-[#8ab4f8]/10 px-3 py-1 rounded-full">It's You</span>
+                    ) : canManage ? (
                       <button
                         onClick={() => openUserModal(u)}
                         className="text-[#8ab4f8] font-medium hover:underline"
@@ -507,10 +518,11 @@ export default function AdminDashboard() {
                       </button>
                     ) : (
                       <span className="text-[#5f6368] text-sm cursor-not-allowed">
-                        Protected User
+                        Restricted
                       </span>
                     )}
-                    {!u.isAdmin && (
+
+                    {canDelete && (
                       <button
                         onClick={() => handleDeleteUser(u._id, u.userName)}
                         className="text-[#EA4335] font-medium hover:underline"
@@ -685,7 +697,6 @@ export default function AdminDashboard() {
             {/* HTML Datalist לאוטוקומפליט */}
             <datalist id="hardware-suggestions">
               {hardwares.map((h) => {
-                // בדיקה: האם המודל כבר מכיל את המותג בהתחלה?
                 const displayName = h.model
                   .toLowerCase()
                   .startsWith(h.brand.toLowerCase())
@@ -849,7 +860,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-[#202124] p-5 sm:p-8 rounded-xl border border-[#5f6368] w-[95%] sm:w-full max-w-md shadow-2xl my-8 mx-auto">
             <h2 className="text-2xl text-[#e8eaed] mb-6 font-bold">
-              Edit User
+              Edit User Settings
             </h2>
             <form onSubmit={handleSaveUser} className="flex flex-col gap-4">
               <label className="text-[#9aa0a6] text-sm mb-[-10px]">
@@ -862,7 +873,7 @@ export default function AdminDashboard() {
                 onChange={(e) =>
                   setUserForm({ ...userForm, userName: e.target.value })
                 }
-                className="w-full p-3 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none"
+                className="w-full p-3 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]"
               />
 
               <label className="text-[#9aa0a6] text-sm mb-[-10px]">Email</label>
@@ -873,11 +884,11 @@ export default function AdminDashboard() {
                 onChange={(e) =>
                   setUserForm({ ...userForm, email: e.target.value })
                 }
-                className="w-full p-3 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none"
+                className="w-full p-3 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]"
               />
 
               <label className="text-[#9aa0a6] text-sm mb-[-10px]">
-                Change Password
+                Reset Password
               </label>
               <input
                 type="password"
@@ -886,22 +897,31 @@ export default function AdminDashboard() {
                 onChange={(e) =>
                   setUserForm({ ...userForm, newPassword: e.target.value })
                 }
-                className="w-full p-3 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none"
+                className="w-full p-3 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8]"
               />
 
-              <label className="flex items-center gap-3 text-[#e8eaed] mt-2 cursor-pointer p-3 bg-[#303134] rounded-lg border border-[#5f6368] hover:bg-[#3c4043] transition-colors w-full">
-                <input
-                  type="checkbox"
-                  checked={userForm.isAdmin}
+              <label className="flex flex-col gap-2">
+                <span className="text-[#9aa0a6] text-sm">System Role</span>
+                <select
+                  value={userForm.role}
                   onChange={(e) =>
-                    setUserForm({ ...userForm, isAdmin: e.target.checked })
+                    setUserForm({ ...userForm, role: e.target.value })
                   }
-                  className="w-5 h-5 accent-[#8ab4f8]"
-                />
-                <span className="font-medium">Grant Admin Privileges</span>
+                  disabled={!isOwner}
+                  className="w-full p-3 rounded-lg bg-[#303134] text-[#e8eaed] border border-[#5f6368] outline-none disabled:cursor-not-allowed disabled:opacity-70 focus:border-[#8ab4f8]"
+                >
+                  <option value="user">Standard User</option>
+                  <option value="admin">Administrator</option>
+                  {isOwner && <option value="owner">Owner</option>}
+                </select>
+                {!isOwner && (
+                  <p className="text-xs text-[#EA4335] mt-1 font-medium">
+                    * Only the Owner can modify system roles.
+                  </p>
+                )}
               </label>
 
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsUserModalOpen(false)}
@@ -911,7 +931,7 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#8ab4f8] text-[#202124] font-bold rounded-lg hover:bg-[#aecbfa]"
+                  className="px-5 py-2 bg-[#8ab4f8] text-[#202124] font-bold rounded-lg hover:bg-[#aecbfa] transition-colors"
                 >
                   Save Changes
                 </button>
@@ -921,7 +941,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* מודל עריכת משחק (מלא!) */}
+      {/* מודל עריכת משחק */}
       {isGameModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-[#202124] p-4 sm:p-6 rounded-xl border border-[#5f6368] w-[95%] sm:w-full max-w-4xl shadow-2xl my-8 max-h-[90vh] overflow-y-auto mx-auto">
@@ -932,7 +952,6 @@ export default function AdminDashboard() {
             <form onSubmit={handleSaveGame} className="flex flex-col gap-6">
               {/* פרטים כלליים */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* הצגת שדה ID רק אם זה משחק חדש */}
                 {!isEditingGame && (
                   <div className="flex flex-col gap-2 md:col-span-2">
                     <label className="text-[#8ab4f8] font-bold">

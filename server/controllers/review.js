@@ -6,18 +6,25 @@ const createReview = async (req, res, next) => {
     const { gameId, rating, text } = req.body;
     const userId = req.user.id;
 
-    const user = await User.findById(userId).populate("myPc.cpuId").populate("myPc.gpuId");
+    const user = await User.findById(userId)
+      .populate("myPc.cpuId")
+      .populate("myPc.gpuId");
 
     if (!user || !user.myPc || !user.myPc.cpuId || !user.myPc.gpuId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "You must set up your PC specs before leaving a review." 
+      return res.status(400).json({
+        success: false,
+        message: "You must set up your PC specs before leaving a review.",
       });
     }
 
     const existingReview = await Review.findOne({ gameId, userId });
     if (existingReview) {
-      return res.status(400).json({ success: false, message: "You have already reviewed this game." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "You have already reviewed this game.",
+        });
     }
 
     const hardwareSnapshot = {
@@ -25,13 +32,25 @@ const createReview = async (req, res, next) => {
       gpuScore: user.myPc.gpuId.benchmarkScore,
       ramGb: user.myPc.ramGb,
       cpuName: `${user.myPc.cpuId.brand} ${user.myPc.cpuId.model}`,
-      gpuName: `${user.myPc.gpuId.brand} ${user.myPc.gpuId.model}`
+      gpuName: `${user.myPc.gpuId.brand} ${user.myPc.gpuId.model}`,
     };
 
-    const newReview = new Review({ gameId, userId, rating, text, hardwareSnapshot });
+    const newReview = new Review({
+      gameId,
+      userId,
+      rating,
+      text,
+      hardwareSnapshot,
+    });
     await newReview.save();
 
-    res.status(201).json({ success: true, message: "Review added successfully", data: newReview });
+    res
+      .status(201)
+      .json({
+        success: true,
+        message: "Review added successfully",
+        data: newReview,
+      });
   } catch (err) {
     next(err);
   }
@@ -42,20 +61,49 @@ const getGameReviews = async (req, res, next) => {
     const gameId = Number(req.params.id);
     const userId = req.user ? req.user.id : null; // ייתכן שהמשתמש אורח
 
-    let reviews = await Review.find({ gameId: gameId }).populate("userId", "userName").lean();
+    let reviews = await Review.find({ gameId: gameId })
+      .populate("userId", "userName")
+      .lean();
 
     // אם זה אורח, פשוט מחזירים את הביקורות בלי סינון (ללא Match Level)
     if (!userId) {
-      const basicReviews = reviews.map(r => ({ ...r, reviewerName: r.userId?.userName || "Unknown", matchLevel: null }));
-      return res.status(200).json({ success: true, count: basicReviews.length, data: basicReviews });
+      const basicReviews = reviews.map((r) => ({
+        ...r,
+        reviewerName: r.userId?.userName || "Unknown",
+        matchLevel: null,
+      }));
+      return res
+        .status(200)
+        .json({
+          success: true,
+          count: basicReviews.length,
+          data: basicReviews,
+        });
     }
 
-    const currentUser = await User.findById(userId).populate("myPc.cpuId").populate("myPc.gpuId");
+    const currentUser = await User.findById(userId)
+      .populate("myPc.cpuId")
+      .populate("myPc.gpuId");
 
     // אם המשתמש מחובר אבל אין לו מפרט מוגדר
-    if (!currentUser || !currentUser.myPc || !currentUser.myPc.cpuId || !currentUser.myPc.gpuId) {
-      const basicReviews = reviews.map(r => ({ ...r, reviewerName: r.userId?.userName || "Unknown", matchLevel: null }));
-      return res.status(200).json({ success: true, count: basicReviews.length, data: basicReviews });
+    if (
+      !currentUser ||
+      !currentUser.myPc ||
+      !currentUser.myPc.cpuId ||
+      !currentUser.myPc.gpuId
+    ) {
+      const basicReviews = reviews.map((r) => ({
+        ...r,
+        reviewerName: r.userId?.userName || "Unknown",
+        matchLevel: null,
+      }));
+      return res
+        .status(200)
+        .json({
+          success: true,
+          count: basicReviews.length,
+          data: basicReviews,
+        });
     }
 
     const myCpuScore = currentUser.myPc.cpuId.benchmarkScore;
@@ -64,7 +112,7 @@ const getGameReviews = async (req, res, next) => {
     const processedReviews = reviews.map((review) => {
       const cpuDiff = Math.abs(review.hardwareSnapshot.cpuScore - myCpuScore);
       const gpuDiff = Math.abs(review.hardwareSnapshot.gpuScore - myGpuScore);
-      
+
       const cpuDiffPercent = (cpuDiff / myCpuScore) * 100;
       const gpuDiffPercent = (gpuDiff / myGpuScore) * 100;
       const totalDiffPercent = (cpuDiffPercent + gpuDiffPercent) / 2;
@@ -77,13 +125,61 @@ const getGameReviews = async (req, res, next) => {
         ...review,
         reviewerName: review.userId?.userName || "Unknown",
         matchLevel: matchLevel,
-        diffPercent: totalDiffPercent.toFixed(1)
+        diffPercent: totalDiffPercent.toFixed(1),
       };
     });
 
-    processedReviews.sort((a, b) => parseFloat(a.diffPercent) - parseFloat(b.diffPercent));
-    res.status(200).json({ success: true, count: processedReviews.length, data: processedReviews });
+    processedReviews.sort(
+      (a, b) => parseFloat(a.diffPercent) - parseFloat(b.diffPercent),
+    );
+    res
+      .status(200)
+      .json({
+        success: true,
+        count: processedReviews.length,
+        data: processedReviews,
+      });
+  } catch (err) {
+    next(err);
+  }
+};
 
+// פונקציית עריכה למנהלים ולבעלים (וכמובן לכותב עצמו)
+const updateReview = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const { text, rating } = req.body;
+
+    const review = await Review.findById(reviewId);
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, message: "Review not found" });
+
+    if (
+      review.userId.toString() !== req.user.id &&
+      req.user.role !== "admin" &&
+      req.user.role !== "owner"
+    ) {
+      return res
+        .status(403)
+        .json({
+          success: false,
+          message: "Not authorized to edit this review",
+        });
+    }
+
+    if (text) review.text = text;
+    if (rating) review.rating = rating;
+
+    await review.save();
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Review updated successfully",
+        data: review,
+      });
   } catch (err) {
     next(err);
   }
@@ -94,10 +190,12 @@ const deleteReview = async (req, res, next) => {
   try {
     const { reviewId } = req.params;
     await Review.findByIdAndDelete(reviewId);
-    res.status(200).json({ success: true, message: "Review deleted successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Review deleted successfully" });
   } catch (err) {
     next(err);
   }
 };
 
-module.exports = { createReview, getGameReviews, deleteReview };
+module.exports = { createReview, getGameReviews, updateReview, deleteReview };

@@ -5,7 +5,12 @@ const reviewRouter = express.Router();
 const { verifyToken, forAdmins } = require("../middlewares/auth");
 const { validate } = require("../middlewares/validate");
 const { reviewSchema } = require("../utils/validatorSchema");
-const { createReview, getGameReviews, deleteReview } = require("../controllers/review");
+const {
+  createReview,
+  getGameReviews,
+  updateReview,
+  deleteReview,
+} = require("../controllers/review");
 
 // מידלוור חכם: קורא את הטוקן אם קיים, אבל לא זורק שגיאה אם המשתמש אורח
 const optionalAuth = (req, res, next) => {
@@ -27,6 +32,9 @@ reviewRouter.get("/:id", optionalAuth, getGameReviews);
 
 // 2. כתיבת ביקורת (חובה טוקן וחובה Zod)
 reviewRouter.post("/", verifyToken, validate(reviewSchema), createReview);
+
+// עריכת ביקורת (חובה טוקן) - בדיקת הרשאות נעשית בתוך הקונטרולר
+reviewRouter.put("/:reviewId", verifyToken, updateReview);
 
 // 3. מחיקת ביקורת (חובה טוקן וחובה הרשאת מנהל)
 reviewRouter.delete("/:reviewId", verifyToken, forAdmins, deleteReview);

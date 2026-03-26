@@ -24,8 +24,8 @@ import { Toaster } from "react-hot-toast";
 const AdminRoute = ({ children }) => {
   const { user, token } = useAuthStore();
 
-  // אם אין טוקן או שהמשתמש אינו מנהל, זרוק אותו לדף הבית
-  if (!token || !user?.isAdmin) {
+  // אם אין טוקן או שהמשתמש אינו מנהל/בעלים, זרוק אותו לדף הבית
+  if (!token || !user || (user.role !== "admin" && user.role !== "owner")) {
     return <Navigate to="/" replace />;
   }
 
@@ -43,15 +43,15 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster 
+      <Toaster
         position="bottom-right"
         toastOptions={{
           style: {
-            background: '#303134',
-            color: '#e8eaed',
-            border: '1px solid #5f6368',
+            background: "#303134",
+            color: "#e8eaed",
+            border: "1px solid #5f6368",
           },
-        }} 
+        }}
       />
       <div className="min-h-screen bg-[#202124] text-white font-sans">
         <Routes>
