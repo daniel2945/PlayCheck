@@ -6,18 +6,17 @@ const {
   createHardware,
   updateHardware,
   deleteHardware,
-  searchHardware
+  searchHardware,
 } = require("../controllers/hardware");
 
-const { verifyToken, forAdmins } = require("../middlewares/auth");
+const { verifyToken, forAdmins, forOwner } = require("../middlewares/auth");
 
-
-hardwareRouter.get('/search', searchHardware);
-hardwareRouter.use(verifyToken, forAdmins);
-hardwareRouter.post('/', createHardware);
-hardwareRouter.get('/', getAllHardwares);
-hardwareRouter.route('/:id')
-  .put(updateHardware)
-  .delete(deleteHardware);
+hardwareRouter.get("/search", searchHardware);
+hardwareRouter.post("/", verifyToken, forAdmins, createHardware);
+hardwareRouter.get("/", verifyToken, forAdmins, getAllHardwares);
+hardwareRouter
+  .route("/:id")
+  .put(verifyToken, forAdmins, updateHardware)
+  .delete(verifyToken, forAdmins, deleteHardware);
 
 module.exports = hardwareRouter;

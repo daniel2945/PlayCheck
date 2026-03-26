@@ -19,9 +19,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    isAdmin: {
-      type: Boolean,
-      default: false,
+    role: {
+      type: String,
+      enum: ["user", "admin", "owner"],
+      default: "user",
     },
     myPc: {
       cpuId: { type: mongoose.Schema.Types.ObjectId, ref: "Hardware" },

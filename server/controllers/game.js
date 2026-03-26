@@ -406,39 +406,62 @@ const checkCompatibilityGuest = async (req, res, next) => {
     }
 
     const { minimum, recommended } = game.requirements;
+    
+    // הפונקציה המקורית - שומרת על תאימות לאחור
     const getComponentGrade = (userScore, minScore, recScore) => {
       if (userScore < minScore) return "weak";
       if (userScore >= recScore) return "optimal";
       return "okay";
     };
 
-    const cpuGrade = getComponentGrade(
-      cpuUser.benchmarkScore,
-      minimum.cpuScore,
-      recommended.cpuScore,
-    );
-    const gpuGrade = getComponentGrade(
-      gpuUser.benchmarkScore,
-      minimum.gpuScore,
-      recommended.gpuScore,
-    );
-    const ramGrade = getComponentGrade(
-      ramUser,
-      minimum.ramGb,
-      recommended.ramGb,
-    );
+    // --- תוספת חדשה: חישוב מתמטי מדויק באחוזים ---
+    const getDetailedPercents = (userScore, minScore, recScore) => {
+      const safeMin = minScore || 1;
+      const safeRec = (recScore && recScore > safeMin) ? recScore : safeMin * 1.5;
+
+      let minPercent = Math.min(Math.round((userScore / safeMin) * 100), 100);
+      let recPercent = Math.min(Math.round((userScore / safeRec) * 100), 100);
+
+      let score = 0;
+      if (userScore < safeMin) {
+        score = Math.round((userScore / safeMin) * 49); // ציון 0-49
+      } else if (userScore < safeRec) {
+        const progress = userScore - safeMin;
+        const range = safeRec - safeMin;
+        score = 50 + Math.round((progress / range) * 49); // ציון 50-99
+      } else {
+        score = 100; // ציון מושלם
+      }
+
+      return { minPercent, recPercent, score };
+    };
+    // ----------------------------------------------
+
+    const cpuGrade = getComponentGrade(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
+    const gpuGrade = getComponentGrade(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
+    const ramGrade = getComponentGrade(ramUser, minimum.ramGb, recommended.ramGb);
+
+    // הפעלת החישוב החדש
+    const cpuDetails = getDetailedPercents(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
+    const gpuDetails = getDetailedPercents(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
+    const ramDetails = getDetailedPercents(ramUser, minimum.ramGb, recommended.ramGb);
 
     let overallGrade = "optimal";
     const grades = [cpuGrade, gpuGrade, ramGrade];
     if (grades.includes("weak")) overallGrade = "weak";
     else if (grades.includes("okay")) overallGrade = "okay";
 
+    // הציון הכללי של המחשב הוא לפי צוואר הבקבוק (הרכיב הכי חלש)
+    const overallScore = Math.min(cpuDetails.score, gpuDetails.score, ramDetails.score);
+
     res.status(200).json({
       success: true,
       data: {
         gameTitle: game.title,
         overall: overallGrade,
+        overallScore: overallScore, // התווסף
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
+        componentScores: { cpu: cpuDetails, gpu: gpuDetails, ram: ramDetails }, // התווסף
         specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,
@@ -499,32 +522,53 @@ const checkCompatibilityUser = async (req, res, next) => {
     }
 
     const { minimum, recommended } = game.requirements;
+    
+    // הפונקציה המקורית
     const getComponentGrade = (userScore, minScore, recScore) => {
       if (userScore < minScore) return "weak";
       if (userScore >= recScore) return "optimal";
       return "okay";
     };
 
-    const cpuGrade = getComponentGrade(
-      cpuUser.benchmarkScore,
-      minimum.cpuScore,
-      recommended.cpuScore,
-    );
-    const gpuGrade = getComponentGrade(
-      gpuUser.benchmarkScore,
-      minimum.gpuScore,
-      recommended.gpuScore,
-    );
-    const ramGrade = getComponentGrade(
-      ramUser,
-      minimum.ramGb,
-      recommended.ramGb,
-    );
+    // --- תוספת חדשה: חישוב מתמטי מדויק באחוזים ---
+    const getDetailedPercents = (userScore, minScore, recScore) => {
+      const safeMin = minScore || 1;
+      const safeRec = (recScore && recScore > safeMin) ? recScore : safeMin * 1.5;
+
+      let minPercent = Math.min(Math.round((userScore / safeMin) * 100), 100);
+      let recPercent = Math.min(Math.round((userScore / safeRec) * 100), 100);
+
+      let score = 0;
+      if (userScore < safeMin) {
+        score = Math.round((userScore / safeMin) * 49); 
+      } else if (userScore < safeRec) {
+        const progress = userScore - safeMin;
+        const range = safeRec - safeMin;
+        score = 50 + Math.round((progress / range) * 49); 
+      } else {
+        score = 100; 
+      }
+
+      return { minPercent, recPercent, score };
+    };
+    // ----------------------------------------------
+
+    const cpuGrade = getComponentGrade(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
+    const gpuGrade = getComponentGrade(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
+    const ramGrade = getComponentGrade(ramUser, minimum.ramGb, recommended.ramGb);
+
+    // הפעלת החישוב החדש
+    const cpuDetails = getDetailedPercents(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
+    const gpuDetails = getDetailedPercents(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
+    const ramDetails = getDetailedPercents(ramUser, minimum.ramGb, recommended.ramGb);
 
     let overallGrade = "optimal";
     const grades = [cpuGrade, gpuGrade, ramGrade];
     if (grades.includes("weak")) overallGrade = "weak";
     else if (grades.includes("okay")) overallGrade = "okay";
+
+    // הציון הכללי של המחשב הוא לפי צוואר הבקבוק (הרכיב הכי חלש)
+    const overallScore = Math.min(cpuDetails.score, gpuDetails.score, ramDetails.score);
 
     currentUser.searchHistory = currentUser.searchHistory.filter(
       (item) => item.gameId.toString() !== gameId.toString(),
@@ -546,7 +590,9 @@ const checkCompatibilityUser = async (req, res, next) => {
       data: {
         gameTitle: game.title,
         overall: overallGrade,
+        overallScore: overallScore, // התווסף
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
+        componentScores: { cpu: cpuDetails, gpu: gpuDetails, ram: ramDetails }, // התווסף
         specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,

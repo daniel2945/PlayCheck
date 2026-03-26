@@ -236,10 +236,10 @@ export default function Layout() {
               Setup PC
             </Link>
 
-            {user?.isAdmin && (
+            {(user?.role === "admin" || user?.role === "owner") && (
               <Link
                 to="/admin"
-                className="text-[#EA4335] hover:text-[#f28b82] transition-colors font-bold px-2 py-1 bg-[#EA4335]/10 rounded-md"
+                className="text-[#EA4335] hover:text-[#f28b82] transition-colors font-bold px-3 py-1 bg-[#EA4335]/10 rounded-md"
               >
                 Admin Panel
               </Link>
@@ -394,11 +394,11 @@ export default function Layout() {
               Setup PC
             </Link>
 
-            {user?.isAdmin && (
+            {(user?.role === "admin" || user?.role === "owner") && (
               <Link
                 to="/admin"
                 onClick={closeMenu}
-                className="text-[#EA4335] hover:text-[#f28b82] transition-colors font-bold block w-fit px-3 py-1 bg-[#EA4335]/10 rounded-md"
+                className="text-[#EA4335] hover:text-[#f28b82] transition-colors font-bold block w-fit px-4 py-1.5 bg-[#EA4335]/10 rounded-lg"
               >
                 Admin Panel
               </Link>

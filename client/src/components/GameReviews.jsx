@@ -20,6 +20,11 @@ export default function GameReviews({ gameId }) {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitMessage, setSubmitMessage] = useState({ type: "", text: "" });
 
+  // State לעריכת ביקורות
+  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [editReviewText, setEditReviewText] = useState("");
+  const [editReviewRating, setEditReviewRating] = useState(5);
+
   // 3. בדיקה חכמה: האם יש למשתמש חומרה מוגדרת?
   const hasHardware = user && user.myPc && user.myPc.cpuId && user.myPc.gpuId;
 
@@ -91,6 +96,29 @@ export default function GameReviews({ gameId }) {
     }
   };
 
+  const handleUpdateReview = async (e, reviewId) => {
+    e.preventDefault();
+    if (editReviewText.trim().length < 10) {
+      toast.error("Review must be at least 10 characters long.");
+      return;
+    }
+    try {
+      const res = await API_CALL(`/api/review/${reviewId}`, "PUT", {
+        text: editReviewText,
+        rating: editReviewRating,
+      });
+      if (res.success) {
+        toast.success("Review updated successfully!");
+        setEditingReviewId(null);
+        fetchReviews();
+      } else {
+        toast.error(res.message || "Failed to update review.");
+      }
+    } catch (err) {
+      toast.error("Error updating review.");
+    }
+  };
+
   const handleDeleteReview = (reviewId) => {
     toast(
       (t) => (
@@ -111,7 +139,7 @@ export default function GameReviews({ gameId }) {
                 try {
                   const res = await API_CALL(
                     `/api/review/${reviewId}`,
-                    "DELETE"
+                    "DELETE",
                   );
                   if (res.success) {
                     fetchReviews();
@@ -131,7 +159,7 @@ export default function GameReviews({ gameId }) {
           </div>
         </div>
       ),
-      { duration: Infinity } // משאיר את הטוסט פתוח עד שהמשתמש לוחץ על משהו
+      { duration: Infinity }, // משאיר את הטוסט פתוח עד שהמשתמש לוחץ על משהו
     );
   };
 
@@ -163,17 +191,17 @@ export default function GameReviews({ gameId }) {
   const formatDate = (dateString) => {
     const reviewDate = new Date(dateString);
     const today = new Date();
-    
+
     // בודק אם התאריך הוא של היום (אותה שנה, חודש ויום)
-    const isToday = 
+    const isToday =
       reviewDate.getDate() === today.getDate() &&
       reviewDate.getMonth() === today.getMonth() &&
       reviewDate.getFullYear() === today.getFullYear();
-      
+
     if (isToday) {
       return "Today";
     }
-    
+
     return reviewDate.toLocaleDateString("en-GB");
   };
 
@@ -312,27 +340,50 @@ export default function GameReviews({ gameId }) {
                   key={review._id}
                   className="bg-[#28292c] p-6 rounded-2xl border border-white/5 relative shadow-md hover:border-white/10 transition-colors"
                 >
-                  {/* כפתור מחיקה למנהלים */}
-                  {user && user.isAdmin && (
-                    <button
-                      onClick={() => handleDeleteReview(review._id)}
-                      className="absolute top-5 right-5 text-[#5f6368] hover:text-[#EA4335] transition-colors bg-[#202124] p-2 rounded-full border border-transparent hover:border-[#EA4335]/30"
-                      title="Delete Review (Admin)"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  )}
+                  {/* כפתורי עריכה ומחיקה למנהלים / בעלים או למי שכתב את הביקורת */}
+                  {user &&
+                    (user.role === "admin" ||
+                      user.role === "owner" ||
+                      user.id === review.userId._id) && (
+                      <div className="absolute top-5 right-5 flex gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingReviewId(review._id);
+                            setEditReviewText(review.text);
+                            setEditReviewRating(review.rating);
+                          }}
+                          className="text-[#5f6368] hover:text-[#8ab4f8] transition-colors bg-[#202124] p-2 rounded-full border border-transparent hover:border-[#8ab4f8]/30"
+                          title="Edit Review"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReview(review._id)}
+                          className="text-[#5f6368] hover:text-[#EA4335] transition-colors bg-[#202124] p-2 rounded-full border border-transparent hover:border-[#EA4335]/30"
+                          title="Delete Review"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
 
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                     <div className="flex items-center gap-4">
@@ -349,7 +400,7 @@ export default function GameReviews({ gameId }) {
                     {review.matchLevel && (
                       <span
                         className={`px-4 py-1.5 text-xs font-bold rounded-full border ${getBadgeStyle(
-                          review.matchLevel
+                          review.matchLevel,
                         )} sm:mr-8 shadow-sm`}
                       >
                         {review.matchLevel}
@@ -361,10 +412,12 @@ export default function GameReviews({ gameId }) {
                     <div className="flex flex-wrap gap-2 mb-5">
                       {/* שימוש בפונקציית הניקוי לשמות החומרה */}
                       <span className="px-3 py-1 bg-[#1a1b1e] border border-white/5 rounded-lg text-xs font-medium text-[#9aa0a6] shadow-sm">
-                        💻 CPU: {cleanHardwareName(review.hardwareSnapshot.cpuName)}
+                        💻 CPU:{" "}
+                        {cleanHardwareName(review.hardwareSnapshot.cpuName)}
                       </span>
                       <span className="px-3 py-1 bg-[#1a1b1e] border border-white/5 rounded-lg text-xs font-medium text-[#9aa0a6] shadow-sm">
-                        🎮 GPU: {cleanHardwareName(review.hardwareSnapshot.gpuName)}
+                        🎮 GPU:{" "}
+                        {cleanHardwareName(review.hardwareSnapshot.gpuName)}
                       </span>
                       <span className="px-3 py-1 bg-[#1a1b1e] border border-white/5 rounded-lg text-xs font-medium text-[#9aa0a6] shadow-sm">
                         💾 RAM: {review.hardwareSnapshot.ramGb}GB
@@ -372,9 +425,53 @@ export default function GameReviews({ gameId }) {
                     </div>
                   )}
 
-                  <p className="text-[#e8eaed] leading-relaxed whitespace-pre-line text-md">
-                    {review.text}
-                  </p>
+                  {editingReviewId === review._id ? (
+                    <form
+                      onSubmit={(e) => handleUpdateReview(e, review._id)}
+                      className="flex flex-col gap-4 mt-2"
+                    >
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            type="button"
+                            key={star}
+                            onClick={() => setEditReviewRating(star)}
+                            className={`text-2xl transition-all hover:scale-110 ${
+                              editReviewRating >= star
+                                ? "text-[#FBBC05] drop-shadow-[0_0_5px_rgba(251,188,5,0.4)]"
+                                : "text-[#5f6368]"
+                            }`}
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={editReviewText}
+                        onChange={(e) => setEditReviewText(e.target.value)}
+                        className="w-full bg-[#1a1b1e] text-[#e8eaed] border border-white/10 rounded-xl p-4 focus:outline-none focus:border-[#8ab4f8] resize-none h-28"
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingReviewId(null)}
+                          className="px-4 py-2 text-sm text-[#9aa0a6] hover:bg-[#3c4043] rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-4 py-2 text-sm bg-[#8ab4f8] text-[#202124] font-bold rounded-lg hover:bg-[#aecbfa] transition-colors"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p className="text-[#e8eaed] leading-relaxed whitespace-pre-line text-md mr-14">
+                      {review.text}
+                    </p>
+                  )}
                   <div className="text-right text-[#5f6368] text-xs font-medium mt-4">
                     {/* שימוש בפונקציית פירמוט התאריך */}
                     {formatDate(review.createdAt)}

@@ -11,6 +11,8 @@ export default function Settings() {
 
   // סטייטים לפרופיל
   const [userName, setUserName] = useState(user?.userName || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [profilePassword, setProfilePassword] = useState("");
 
   // סטייטים לסיסמה
   const [currentPassword, setCurrentPassword] = useState("");
@@ -25,15 +27,27 @@ export default function Settings() {
     setLoading(true);
 
     try {
-      const data = await API_CALL("/api/auth/me/name", "PUT", {
-        userName: userName,
-      });
-
-      if (data.success) {
-        toast.success("Profile updated successfully!");
-        // מעדכנים את ה-Store המקומי
-        setAuth({ ...user, userName }, token);
+      // עדכון שם משתמש רק אם השתנה
+      if (userName !== user.userName) {
+        await API_CALL("/api/auth/me/name", "PUT", { userName });
       }
+
+      // עדכון מייל רק אם השתנה (דורש סיסמה)
+      if (email !== user.email) {
+        if (!profilePassword) {
+          toast.error("Password is required to change your email.");
+          setLoading(false);
+          return;
+        }
+        await API_CALL("/api/auth/me/email", "PUT", {
+          email,
+          password: profilePassword,
+        });
+      }
+
+      toast.success("Profile updated successfully!");
+      setAuth({ ...user, userName, email }, token);
+      setProfilePassword("");
     } catch (err) {
       toast.error(err.message || "Failed to update profile.");
     } finally {
@@ -125,19 +139,6 @@ export default function Settings() {
           Account Settings
         </h1>
 
-        {/* אזור הודעות משותף */}
-        {status.message && (
-          <div
-            className={`p-4 rounded-xl mb-8 font-medium border shadow-lg ${
-              status.type === "success"
-                ? "bg-[#34A853]/10 border-[#34A853] text-[#81c995]"
-                : "bg-[#EA4335]/10 border-[#EA4335] text-[#f28b82]"
-            }`}
-          >
-            {status.message}
-          </div>
-        )}
-
         <div className="space-y-8">
           {/* =========================================
               כרטיסיית פרטי פרופיל
@@ -169,15 +170,32 @@ export default function Settings() {
                 </label>
                 <input
                   type="email"
-                  disabled
-                  value={user?.email || ""}
-                  className="w-full p-3 rounded-lg bg-[#202124] text-[#5f6368] border border-[#3c4043] cursor-not-allowed"
-                  title="Email cannot be changed directly"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8] transition-colors"
                 />
-                <p className="text-xs text-[#5f6368] mt-2">
-                  Email change requires administrator assistance.
-                </p>
               </div>
+
+              {email !== user?.email && (
+                <div className="animate-fade-in">
+                  <label className="block text-[#9aa0a6] text-sm mb-2">
+                    Verify Password <span className="text-[#EA4335]">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={profilePassword}
+                    onChange={(e) => setProfilePassword(e.target.value)}
+                    placeholder="Enter current password to save email"
+                    className="w-full p-3 rounded-lg bg-[#202124] text-[#e8eaed] border border-[#5f6368] outline-none focus:border-[#8ab4f8] transition-colors"
+                  />
+                  <p className="text-xs text-[#9aa0a6] mt-2">
+                    Required to verify your identity when changing email
+                    address.
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-end mt-2">
                 <button
