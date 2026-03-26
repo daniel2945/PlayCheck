@@ -53,7 +53,17 @@ const extractHardwareText = (text, type) => {
       ? /(?:Processor \(CPU\)|Processor|CPU):\s*(.*?)(?=\s*(?:,|Graphics:|Memory:|OS:|$))/i
       : /(?:Graphics Card|Video Card|Graphics|Video|GPU):\s*(.*?)(?=\s*(?:,|DirectX:|Storage:|$))/i;
   const match = cleanText.match(regex);
-  return match && match[1] ? match[1].trim() : "Not specified by developer";
+
+  if (match && match[1]) {
+    let result = match[1].trim();
+
+    // ✨ התיקון האמיתי יושב כאן: אנחנו מסננים את הטקסט אחרי שהרג'קס שלף אותו ✨
+    if (type === "GPU" && /^\d+(\.\d+)?\s*(mb|gb|vram)\s*$/i.test(result)) {
+      return `Any GPU with ${result.toUpperCase()} VRAM`;
+    }
+
+    return result;
+  }
 };
 
 // Helper to dynamically format RAM (GB vs MB)
@@ -71,7 +81,9 @@ const searchGames = async (req, res, next) => {
     // ✨ הוספנו פה את genre לשליפה ✨
     const { q, year, page, sort, genre } = req.query;
 
-    console.log(`[SEARCH DEBUG] Query: ${q}, Year: ${year}, Genre: ${genre}, Page: ${page}`);
+    console.log(
+      `[SEARCH DEBUG] Query: ${q}, Year: ${year}, Genre: ${genre}, Page: ${page}`,
+    );
 
     const params = {
       key: apiKey, // ודא שהמשתנה הזה מוגדר אצלך בקובץ כמו קודם
@@ -93,7 +105,7 @@ const searchGames = async (req, res, next) => {
     }
 
     if (year) params.dates = `${year}-01-01,${year}-12-31`;
-    
+
     // ✨ הוספנו את הסינון לפי ז'אנר ✨
     if (genre) params.genres = genre;
 
@@ -127,15 +139,15 @@ const searchGames = async (req, res, next) => {
 const searchGame = async (req, res, next) => {
   try {
     const id = req.params.id;
-    if (!id) return res.status(400).json({ success: false, data: "game not found" });
+    if (!id)
+      return res.status(400).json({ success: false, data: "game not found" });
     const game = await getOrFetchGame(id);
-    
+
     res.status(200).json({ success: true, data: game });
   } catch (err) {
     next(err);
   }
 };
-
 
 const createGame = async (req, res, next) => {
   try {
@@ -299,6 +311,17 @@ const clearAllGames = async (req, res, next) => {
   }
 };
 
+// פילטר סופי שמתקן טקסטים של VRAM בלבד
+const fixGpuVramText = (text) => {
+  if (!text || text === "Not specified by developer") return text;
+  
+  // אם הטקסט הוא רק מספר עם GB/MB (למשל "1 GB")
+  if (/^\d+(\.\d+)?\s*(mb|gb|vram)\s*$/i.test(text.trim())) {
+    return `Any GPU with ${text.trim().toUpperCase()} VRAM`;
+  }
+  return text;
+};
+
 const getOrFetchGame = async (gameId) => {
   let game = await Game.findById(gameId);
   if (game) return game;
@@ -306,6 +329,7 @@ const getOrFetchGame = async (gameId) => {
   const response = await axios.get(`https://api.rawg.io/api/games/${gameId}`, {
     params: { key: apiKey },
   });
+  //console.log(gameData.JSON());
   const gameData = response.data;
   const pcPlatform = gameData.platforms?.find(
     (p) => p.platform.name.toLowerCase() === "pc",
@@ -317,6 +341,12 @@ const getOrFetchGame = async (gameId) => {
       : { minimum: null, recommended: null };
 
   const { cpuList, gpuList } = hardwareCache;
+
+  console.log("\n=============================================");
+  console.log(`🎮 RAW REQUIREMENTS FOR GAME ID: ${gameId} (${gameData.name})`);
+  console.log("MINIMUM:", pcRequirements.minimum);
+  console.log("RECOMMENDED:", pcRequirements.recommended);
+  console.log("=============================================\n");
 
   const minimum = await parseGameRequirements(
     pcRequirements.minimum,
@@ -339,16 +369,20 @@ const getOrFetchGame = async (gameId) => {
   recommended.gpuScore = Math.max(minimum.gpuScore, recommended.gpuScore);
   recommended.ramGb = Math.max(minimum.ramGb, recommended.ramGb);
 
+  // מחזירים את ה- || כדי לא לדרוס את ה-AI, ומעבירים את ה-GPU דרך הפילטר הסופי
   minimum.cpuText =
     minimum.cpuText || extractHardwareText(pcRequirements.minimum, "CPU");
-  minimum.gpuText =
-    minimum.gpuText || extractHardwareText(pcRequirements.minimum, "GPU");
+  minimum.gpuText = fixGpuVramText(
+    minimum.gpuText || extractHardwareText(pcRequirements.minimum, "GPU"),
+  );
+
   recommended.cpuText =
     recommended.cpuText ||
     extractHardwareText(pcRequirements.recommended, "CPU");
-  recommended.gpuText =
+  recommended.gpuText = fixGpuVramText(
     recommended.gpuText ||
-    extractHardwareText(pcRequirements.recommended, "GPU");
+      extractHardwareText(pcRequirements.recommended, "GPU"),
+  );
 
   game = new Game({
     _id: gameId,
@@ -376,7 +410,7 @@ const getOrFetchGame = async (gameId) => {
 
   await game.save();
   return game;
-};
+};;
 
 const checkCompatibilityGuest = async (req, res, next) => {
   try {
