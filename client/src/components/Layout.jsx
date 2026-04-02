@@ -51,7 +51,6 @@ export default function Layout() {
   }, [searchQuery]);
 
   // שליפת התוצאות מהשרת כשה-Debounce מתעדכן
-// שליפת התוצאות מהשרת כשה-Debounce מתעדכן
   useEffect(() => {
     const fetchResults = async () => {
       if (!debouncedQuery.trim()) {
@@ -62,11 +61,10 @@ export default function Layout() {
       
       setIsSearching(true);
       try {
-        // ✨ כאן אנחנו מפעילים את הקסם! ✨
         const fixedQuery = fixHebrewToEnglish(debouncedQuery);
 
         const data = await API_CALL(
-          `/api/game/search?q=${encodeURIComponent(fixedQuery)}` // שולחים את המילה המתוקנת!
+          `/api/game/search?q=${encodeURIComponent(fixedQuery)}`
         );
         
         if (data.success && data.data) {
@@ -83,7 +81,6 @@ export default function Layout() {
     fetchResults();
   }, [debouncedQuery]);
 
-  // ✨ התיקון לבאג הסגירה של החלונית ✨
   useEffect(() => {
     const handleClickOutside = (event) => {
       const isOutsideDesktop =
@@ -118,7 +115,6 @@ export default function Layout() {
     closeMenu();
   };
 
-  // משתנה שמכיל את עיצוב ה-Dropdown כדי לא לשכפל קוד
   const dropdownContent = showDropdown && searchQuery.trim() && (
     <div className="absolute top-full left-0 right-0 mt-2 bg-[#303134] border border-[#5f6368] rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col">
       {isSearching ? (
@@ -180,15 +176,28 @@ export default function Layout() {
           <Link
             to="/"
             onClick={closeMenu}
-            className="text-2xl font-bold flex items-center gap-1 hover:opacity-80 transition-opacity"
+            className="text-2xl font-extrabold flex items-center gap-2.5 hover:opacity-90 transition-all duration-300 group"
           >
-            <span className="text-[#4285F4]">P</span>
-            <span className="text-[#EA4335]">l</span>
-            <span className="text-[#FBBC05]">a</span>
-            <span className="text-[#4285F4]">y</span>
-            <span className="text-[#34A853]">C</span>
-            <span className="text-[#EA4335]">h</span>
-            <span className="text-white">eck</span>
+            {/* הלוגו החדש - אייקון בקר משחק */}
+            <div className="bg-gradient-to-br from-[#8ab4f8] to-[#c58af9] p-1.5 rounded-lg shadow-lg group-hover:shadow-[0_0_15px_rgba(138,180,248,0.4)] transition-shadow">
+              <svg
+                className="w-5 h-5 text-[#0f172a]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <rect x="2" y="6" width="20" height="12" rx="4" ry="4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M6 12h4m-2-2v4m10-2h.01M14 12h.01" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            
+            {/* טקסט הלוגו החדש */}
+            <span className="tracking-tight">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#8ab4f8] to-[#c58af9]">
+                Play
+              </span>
+              <span className="text-[#e8eaed]">Check</span>
+            </span>
           </Link>
 
           <button
@@ -461,13 +470,14 @@ export default function Layout() {
 
       <footer className="bg-[#0f172a] border-t border-[#1e293b] py-6 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[#94a3b8] text-sm font-medium">
+          <div className="text-[#94a3b8] text-sm font-medium flex items-center gap-1.5">
             &copy; 2026{" "}
-            <span className="text-[#e8eaed] font-bold tracking-wide">
-              PlayCheck
+            <span className="font-bold tracking-wide">
+              <span className="text-[#8ab4f8]">Play</span>
+              <span className="text-[#e8eaed]">Check</span>
             </span>
             . All rights reserved.
-          </p>
+          </div>
           <div className="flex gap-6 text-sm text-[#94a3b8]">
             <Link
               to="/terms"
