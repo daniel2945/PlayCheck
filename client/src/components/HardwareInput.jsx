@@ -7,7 +7,6 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   const [results, setResults] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // ✨ פונקציית עזר חכמה שמונעת כפילות כמו "Intel Intel Core..." ✨
   const formatHardwareName = (brand, model) => {
     if (!brand) return model;
     if (!model) return brand;
@@ -17,7 +16,10 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   };
 
   useEffect(() => {
-    if (query.length < 2) return;
+    if (query.length < 2) {
+      setResults([]);
+      return;
+    }
 
     const delayDebounceFn = setTimeout(async () => {
       try {
@@ -41,11 +43,9 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   const handleChange = (e) => {
     const newQuery = e.target.value;
     setQuery(newQuery);
-    if (newQuery.length < 2) setResults([]);
     setIsOpen(true);
   };
 
-  // === ה-UI נשאר כמעט ללא שינוי, הוא כתוב מצוין ===
   if (selectedItem) {
     return (
       <div className="relative w-full">
@@ -53,7 +53,6 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
           <div className="flex items-center gap-3">
             <span className="text-[#9aa0a6] text-sm font-medium">{type}:</span>
             <span className="text-[#e8eaed] text-lg">
-              {/* ✨ שימוש בפונקציה החכמה ✨ */}
               {formatHardwareName(selectedItem.brand, selectedItem.model)}
             </span>
           </div>
@@ -64,7 +63,6 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
               if (onSelect) onSelect(null);
             }}
             className="text-[#9aa0a6] hover:text-[#e8eaed] transition-colors p-1"
-            title="Clear selection"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -90,24 +88,45 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
         />
       </div>
 
-      {isOpen && results.length > 0 && (
-        <div className="absolute w-full bg-[#303134] mt-2 rounded-2xl shadow-2xl z-50 border border-[#5f6368] overflow-hidden max-h-60 overflow-y-auto">
-          <div className="py-2">
-            {results.map((item) => (
-              <div
-                key={item._id}
-                onClick={() => {
-                  setSelectedItem(item);
-                  setIsOpen(false);
-                  if (onSelect) onSelect(item);
-                }}
-                className="px-6 py-2.5 hover:bg-[#3c4043] cursor-pointer text-[#e8eaed] transition-colors"
-              >
-                {/* ✨ שימוש בפונקציה החכמה ✨ */}
-                {formatHardwareName(item.brand, item.model)}
-              </div>
-            ))}
-          </div>
+      {isOpen && query.length >= 2 && (
+        <div 
+          className="absolute w-full bg-[#303134] mt-2 rounded-2xl shadow-2xl z-50 border border-[#5f6368] overflow-hidden"
+          onMouseDown={(e) => e.preventDefault()} // ✨ התיקון: מונע מהתיבה להיסגר כשנוגעים בה ✨
+        >
+          {results.length > 0 ? (
+            <div className="py-2 max-h-60 overflow-y-auto">
+              {results.map((item) => (
+                <div
+                  key={item._id}
+                  onClick={() => {
+                    setSelectedItem(item);
+                    setIsOpen(false);
+                    if (onSelect) onSelect(item);
+                  }}
+                  className="px-6 py-2.5 hover:bg-[#3c4043] cursor-pointer text-[#e8eaed] transition-colors"
+                >
+                  {formatHardwareName(item.brand, item.model)}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-6 py-6 text-center">
+              <p className="text-[#9aa0a6] text-sm mb-1">
+                Can't find your {type.toLowerCase()}?
+              </p>
+              <p className="text-[#e8eaed] text-sm leading-relaxed">
+                Contact us at: <br />
+                <a 
+                  href="mailto:playcheck769@gmail.com" 
+                  className="text-[#8ab4f8] font-bold hover:underline"
+                >
+                  playcheck769@gmail.com
+                </a>
+                <br />
+                <span className="text-[#9aa0a6] text-xs">and we'll add it for you!</span>
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
