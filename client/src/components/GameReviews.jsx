@@ -340,12 +340,13 @@ export default function GameReviews({ gameId }) {
                   key={review._id}
                   className="bg-[#28292c] p-6 rounded-2xl border border-white/5 relative shadow-md hover:border-white/10 transition-colors"
                 >
-                  {/* כפתורי עריכה ומחיקה למנהלים / בעלים או למי שכתב את הביקורת */}
-                  {user &&
-                    (user.role === "admin" ||
-                      user.role === "owner" ||
-                      user.id === review.userId._id) && (
-                      <div className="absolute top-5 right-5 flex gap-2">
+                  {/* הפרדת כפתורי עריכה (לכולם כולל הכותב) ומחיקה (למנהלים בלבד) */}
+                  {user && (
+                    <div className="absolute top-5 right-5 flex gap-2">
+                      {/* כפתור עריכה - יוצג לכותב הביקורת או למנהלים/בעלים */}
+                      {(user.role === "admin" ||
+                        user.role === "owner" ||
+                        user._id === review.userId._id) && (
                         <button
                           onClick={() => {
                             setEditingReviewId(review._id);
@@ -364,6 +365,10 @@ export default function GameReviews({ gameId }) {
                             <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                           </svg>
                         </button>
+                      )}
+
+                      {/* כפתור מחיקה - יוצג אך ורק למנהלים/בעלים */}
+                      {(user.role === "admin" || user.role === "owner") && (
                         <button
                           onClick={() => handleDeleteReview(review._id)}
                           className="text-[#5f6368] hover:text-[#EA4335] transition-colors bg-[#202124] p-2 rounded-full border border-transparent hover:border-[#EA4335]/30"
@@ -382,8 +387,9 @@ export default function GameReviews({ gameId }) {
                             />
                           </svg>
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
                     <div className="flex items-center gap-4">
