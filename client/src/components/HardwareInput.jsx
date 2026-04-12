@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import API_CALL from "../api/API_CALL";
 
-export default function HardwareInput({ type, placeholder, onSelect }) {
+export default function HardwareInput({ type, placeholder, onSelect, value }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState([]);
@@ -10,10 +10,21 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
   const formatHardwareName = (brand, model) => {
     if (!brand) return model;
     if (!model) return brand;
-    return model.toLowerCase().startsWith(brand.toLowerCase()) 
-      ? model 
+    return model.toLowerCase().startsWith(brand.toLowerCase())
+      ? model
       : `${brand} ${model}`;
   };
+
+  // ✨ NEW: Listen for external value injections (like Deep Scan)
+  useEffect(() => {
+    if (value && value._id !== selectedItem?._id) {
+      setSelectedItem(value);
+      setQuery(formatHardwareName(value.brand, value.model));
+    } else if (!value) {
+      setSelectedItem(null);
+      setQuery("");
+    }
+  }, [value]);
 
   useEffect(() => {
     if (query.length < 2) {
@@ -24,7 +35,7 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
     const delayDebounceFn = setTimeout(async () => {
       try {
         const data = await API_CALL(
-          `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`
+          `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`,
         );
         if (data.success) {
           setResults(data.data);
@@ -64,8 +75,18 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
             }}
             className="text-[#9aa0a6] hover:text-[#e8eaed] transition-colors p-1"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
             </svg>
           </button>
         </div>
@@ -89,7 +110,7 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
       </div>
 
       {isOpen && query.length >= 2 && (
-        <div 
+        <div
           className="absolute w-full bg-[#303134] mt-2 rounded-2xl shadow-2xl z-50 border border-[#5f6368] overflow-hidden"
           onMouseDown={(e) => e.preventDefault()} // ✨ התיקון: מונע מהתיבה להיסגר כשנוגעים בה ✨
         >
@@ -116,14 +137,16 @@ export default function HardwareInput({ type, placeholder, onSelect }) {
               </p>
               <p className="text-[#e8eaed] text-sm leading-relaxed">
                 Contact us at: <br />
-                <a 
-                  href="mailto:playcheck769@gmail.com" 
+                <a
+                  href="mailto:playcheck769@gmail.com"
                   className="text-[#8ab4f8] font-bold hover:underline"
                 >
                   playcheck769@gmail.com
                 </a>
                 <br />
-                <span className="text-[#9aa0a6] text-xs">and we'll add it for you!</span>
+                <span className="text-[#9aa0a6] text-xs">
+                  and we'll add it for you!
+                </span>
               </p>
             </div>
           )}
