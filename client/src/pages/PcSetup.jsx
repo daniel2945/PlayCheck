@@ -4,7 +4,6 @@ import API_CALL from "../api/API_CALL"; // ייבוא הפונקציה שלך
 import HardwareInput from "../components/HardwareInput";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
-import { detectHardware } from "../utils/hardwareDetection"; // Imported utility
 
 export default function PcSetup() {
   const navigate = useNavigate(); // הפעלת הניווט
@@ -14,8 +13,6 @@ export default function PcSetup() {
   const [ram, setRam] = useState(16);
   const [saveMessage, setSaveMessage] = useState("");
 
-  // New UI states for Auto-Detect feature
-  const [isDetecting, setIsDetecting] = useState(false);
   const [detectAlert, setDetectAlert] = useState(null);
 
   // New UI states for Deep Scan Desktop feature
@@ -46,7 +43,11 @@ export default function PcSetup() {
             if (matchedCpu) setCpu(matchedCpu);
             if (matchedGpu) setGpu(matchedGpu);
             if (matchedRam) setRam(matchedRam);
-            console.log("Deep Scan Sync Applied to UI:", { matchedCpu, matchedGpu, matchedRam });
+            console.log("Deep Scan Sync Applied to UI:", {
+              matchedCpu,
+              matchedGpu,
+              matchedRam,
+            });
 
             setDetectAlert({
               type: "success",
@@ -65,83 +66,6 @@ export default function PcSetup() {
     }
     return () => clearInterval(interval);
   }, [isScanning, deepScanToken]);
-
-  const handleAutoDetect = async () => {
-    setIsDetecting(true);
-    setDetectAlert(null);
-    setSaveMessage("");
-
-    try {
-      const rawData = detectHardware();
-
-      // TEMPORARY DIRECT FETCH TO ISOLATE NETWORK/PROXY ISSUES
-      // Update the port below if your Express server is not on port 5000
-      const response = await fetch(
-        "http://localhost:3000/api/hardware/auto-detect",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(rawData),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const res = await response.json();
-
-      if (res.success) {
-        const detectedGpu = res.data.gpu;
-        const detectedRam = res.data.ram || 8;
-
-        setRam(detectedRam);
-
-        if (detectedGpu) {
-          // Format name cleanly to avoid "Intel Intel UHD Graphics" duplication
-          const cleanName = detectedGpu.model
-            .toLowerCase()
-            .startsWith(detectedGpu.brand.toLowerCase())
-            ? detectedGpu.model
-            : `${detectedGpu.brand} ${detectedGpu.model}`;
-
-          const isIntegrated =
-            cleanName.toLowerCase().includes("intel") ||
-            cleanName.toLowerCase().includes("integrated");
-
-          // Only overwrite if the user hasn't manually selected a GPU yet
-          if (!gpu) {
-            setGpu(detectedGpu);
-          }
-
-          if (isIntegrated) {
-            setDetectAlert({
-              type: "warning",
-              message: `⚠️ Detected Integrated Graphics (${cleanName}). If you have a dedicated gaming GPU (NVIDIA/AMD), please search for it manually.`,
-            });
-          } else {
-            setDetectAlert({
-              type: "success",
-              message: `✅ Auto-detected your GPU: ${cleanName}. Note: RAM may be higher than reported (${detectedRam}GB). CPU requires manual search.`,
-            });
-          }
-        } else {
-          setDetectAlert({
-            type: "warning",
-            message: `⚠️ We couldn't accurately verify your GPU. Please search for it manually. (Detected RAM: ${detectedRam}GB+)`,
-          });
-        }
-      }
-    } catch (err) {
-      console.error("🔥 EXPLICIT AUTO-DETECT ERROR:", err);
-      setDetectAlert({
-        type: "error",
-        message: "Failed to auto-detect hardware.",
-      });
-    } finally {
-      setIsDetecting(false);
-    }
-  };
 
   const startDeepScan = () => {
     const token = Math.floor(100000 + Math.random() * 900000).toString();
@@ -220,25 +144,21 @@ export default function PcSetup() {
           Set Up Your PC Specs
         </h2>
         <div className="w-full max-w-2xl space-y-6">
-          {/* Auto-Detect Action Area */}
-          <div className="flex flex-col items-center bg-[#303134]/90 backdrop-blur-sm p-5 rounded-3xl border border-[#5f6368] shadow-lg mb-2 gap-4">
+          {/* Deep Scan Action Area */}
+          <div className="flex flex-col items-center bg-gradient-to-b from-[#303134]/90 to-[#28292c]/90 backdrop-blur-sm p-6 sm:p-8 rounded-3xl border border-[#8ab4f8]/40 shadow-lg gap-4 text-center transition-all hover:border-[#8ab4f8]/60">
+            <div className="max-w-lg mb-2">
+              <h3 className="text-[#e8eaed] font-bold text-xl mb-2 flex items-center justify-center gap-2">
+                <span className="text-2xl">🤔</span> Don't know your PC specs?
+              </h3>
+              <p className="text-[#9aa0a6] text-sm sm:text-base leading-relaxed">
+                Save time and skip the manual search. Let our Deep Scan tool
+                securely auto-detect your CPU, GPU, and RAM in seconds!
+              </p>
+            </div>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                onClick={handleAutoDetect}
-                disabled={isDetecting || isScanning}
-                className="flex items-center justify-center gap-2 bg-[#FBBC05] hover:bg-[#f9ab00] text-[#202124] px-6 py-2.5 rounded-full font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isDetecting ? (
-                  <span className="w-4 h-4 border-2 border-[#202124] border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  <span>🌐</span>
-                )}
-                Browser Auto-Detect
-              </button>
-
-              <button
                 onClick={startDeepScan}
-                disabled={isDetecting || isScanning}
+                disabled={isScanning}
                 className="flex items-center justify-center gap-2 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] px-6 py-2.5 rounded-full font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <span>🖥️</span>
@@ -290,6 +210,15 @@ export default function PcSetup() {
                 {detectAlert.message}
               </p>
             )}
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center w-full py-2 opacity-80">
+            <div className="flex-1 h-px bg-[#5f6368]"></div>
+            <span className="px-4 text-[#9aa0a6] text-sm font-bold uppercase tracking-widest">
+              Or enter manually
+            </span>
+            <div className="flex-1 h-px bg-[#5f6368]"></div>
           </div>
 
           <HardwareInput

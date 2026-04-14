@@ -244,6 +244,12 @@ export default function Layout() {
             >
               Setup PC
             </Link>
+            <Link
+              to="/compare"
+              className="hover:text-[#8ab4f8] transition-colors"
+            >
+              Compare
+            </Link>
 
             {(user?.role === "admin" || user?.role === "owner") && (
               <Link
@@ -401,6 +407,13 @@ export default function Layout() {
               className="text-[#94a3b8] hover:text-[#8ab4f8] transition-colors font-medium"
             >
               Setup PC
+            </Link>
+            <Link
+              to="/compare"
+              onClick={closeMenu}
+              className="text-[#94a3b8] hover:text-[#8ab4f8] transition-colors font-medium"
+            >
+              Compare Hardware
             </Link>
 
             {(user?.role === "admin" || user?.role === "owner") && (

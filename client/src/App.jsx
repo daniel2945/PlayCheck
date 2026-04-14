@@ -10,6 +10,7 @@ import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import PcSetup from "./pages/PcSetup";
+import Compare from "./pages/Compare";
 import GamesCatalog from "./pages/GamesCatalog";
 import Result from "./pages/Result";
 import Profile from "./pages/Profile";
@@ -68,6 +69,9 @@ function App() {
 
             {/* הגדרת מפרט מחשב */}
             <Route path="setup" element={<PcSetup />} />
+
+            {/* השוואת חומרה */}
+            <Route path="compare" element={<Compare />} />
 
             {/* קטלוג משחקים - עכשיו עובד עם Pagination */}
             <Route path="catalog" element={<GamesCatalog />} />

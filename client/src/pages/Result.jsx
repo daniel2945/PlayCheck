@@ -300,50 +300,226 @@ export default function Result() {
       <h2 className="text-3xl sm:text-4xl text-[#e8eaed] mb-2 text-center font-medium">
         {data.gameTitle}
       </h2>
-      <p className="text-[#9aa0a6] mb-12 text-lg">Performance Analysis</p>
+      <p className="text-[#9aa0a6] mb-8 text-lg">Performance Analysis</p>
 
-      {/* Top: Large Circular Gauge */}
-      <div className="relative flex flex-col items-center mb-8">
-        <div className="relative w-64 h-64 flex items-center justify-center">
-          <svg className="absolute top-0 left-0 w-full h-full transform -rotate-90 drop-shadow-xl">
-            <circle
-              cx="128"
-              cy="128"
-              r={radius}
-              stroke="#303134"
-              strokeWidth="16"
-              fill="transparent"
-            />
-            <circle
-              cx="128"
-              cy="128"
-              r={radius}
-              stroke={overallColor}
-              strokeWidth="16"
-              fill="transparent"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              className="transition-all duration-1000 ease-out"
-            />
-          </svg>
-          <div className="text-center z-10 flex flex-col items-center mt-2">
-            <span
-              className="text-5xl sm:text-6xl font-bold"
-              style={{ color: overallColor }}
+      {/* =========================================
+          1. Detailed Specs Cards (גרפים מפורטים)
+          הועבר למעלה כדי לא לייאש משתמשים מיד!
+      ========================================= */}
+      <div className="bg-[#303134] border border-[#5f6368] rounded-2xl p-5 sm:p-8 w-full max-w-4xl shadow-xl mb-8">
+        {/* אזהרת צוואר בקבוק אם קיים */}
+        {bottleneck && (
+          <div className="w-full bg-gradient-to-r from-[#EA4335]/20 to-[#202124] border border-[#EA4335]/50 p-4 rounded-xl mb-8 flex items-start sm:items-center gap-4">
+            <span className="text-2xl mt-1 sm:mt-0">⚠️</span>
+            <div>
+              <h4 className="text-[#EA4335] font-bold">
+                Performance Bottleneck Detected
+              </h4>
+              <p className="text-[#e8eaed] text-sm">
+                Your{" "}
+                <span className="font-bold text-white bg-white/10 px-1 rounded">
+                  {bottleneck}
+                </span>{" "}
+                is the weakest link holding back performance.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <h3 className="text-2xl text-[#e8eaed] mb-6 border-b border-[#5f6368] pb-4 font-medium">
+          Detailed Hardware Breakdown
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {hardwareParts.map((part) => {
+            const compData = data.components[part.id];
+            const scoreData = data.componentScores
+              ? data.componentScores[part.id]
+              : null;
+            const details = data.specsDetails[part.id];
+
+            const partPercent = scoreData
+              ? scoreData.score
+              : compData === "optimal"
+                ? 100
+                : compData === "okay"
+                  ? 75
+                  : 30;
+            const partColor =
+              partPercent >= 100
+                ? "#34A853"
+                : partPercent >= 50
+                  ? "#FBBC05"
+                  : "#EA4335";
+            const partStatusText =
+              partPercent >= 100
+                ? "Meets Recommended"
+                : partPercent >= 50
+                  ? "Meets Minimum"
+                  : "Below Minimum";
+
+            const smallRadius = 40;
+            const smallCircumference = 2 * Math.PI * smallRadius;
+            const smallStrokeDashoffset =
+              smallCircumference -
+              (Math.min(partPercent, 100) / 100) * smallCircumference;
+
+            return (
+              <div
+                key={part.id}
+                className="flex flex-col items-center bg-[#202124] p-6 rounded-2xl border border-[#3c4043] shadow-lg hover:border-[#5f6368] hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all group relative overflow-hidden"
+              >
+                <div
+                  className="absolute top-0 left-0 w-full h-1"
+                  style={{ backgroundColor: partColor }}
+                ></div>
+
+                <h4 className="text-xl text-[#e8eaed] font-bold mb-4">
+                  {part.label}
+                </h4>
+
+                <div className="relative w-28 h-28 mb-4 flex items-center justify-center">
+                  <svg
+                    className="absolute top-0 left-0 w-full h-full transform -rotate-90 transition-all duration-500"
+                    style={{
+                      filter: `drop-shadow(0 0 10px ${partColor}40)`,
+                    }}
+                  >
+                    <circle
+                      cx="56"
+                      cy="56"
+                      r={smallRadius}
+                      stroke="#303134"
+                      strokeWidth="8"
+                      fill="transparent"
+                    />
+                    <circle
+                      cx="56"
+                      cy="56"
+                      r={smallRadius}
+                      stroke={partColor}
+                      strokeWidth="8"
+                      fill="transparent"
+                      strokeDasharray={smallCircumference}
+                      strokeDashoffset={smallStrokeDashoffset}
+                      strokeLinecap="round"
+                      className="transition-all duration-1000 ease-out"
+                    />
+                  </svg>
+                  <span
+                    className="text-2xl font-bold z-10"
+                    style={{ color: partColor }}
+                  >
+                    {partPercent}%
+                  </span>
+                </div>
+
+                <span
+                  className="text-[11px] font-bold uppercase tracking-wider mb-6 px-3 py-1 rounded-full bg-[#1a1b1e] border"
+                  style={{
+                    borderColor: `${partColor}50`,
+                    color: partColor,
+                  }}
+                >
+                  {partStatusText}
+                </span>
+
+                <div className="w-full flex flex-col gap-2 text-sm text-left bg-[#1a1b1e] p-4 rounded-xl border border-[#3c4043]">
+                  <div className="flex flex-col border-b border-[#3c4043] pb-2">
+                    <span className="text-[#9aa0a6] text-xs font-medium mb-1 uppercase tracking-wider">
+                      Your {part.label}
+                    </span>
+                    <span
+                      className="text-[#8ab4f8] font-bold truncate"
+                      title={cleanHardwareName(details?.user)}
+                    >
+                      {cleanHardwareName(details?.user)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col border-b border-[#3c4043] pb-2">
+                    <span className="text-[#9aa0a6] text-xs font-medium mb-1 uppercase tracking-wider">
+                      Minimum
+                    </span>
+                    <span
+                      className="text-[#e8eaed] truncate"
+                      title={details?.min}
+                    >
+                      {details?.min || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[#9aa0a6] text-xs font-medium mb-1 uppercase tracking-wider">
+                      Recommended
+                    </span>
+                    <span
+                      className="text-[#e8eaed] truncate"
+                      title={details?.rec}
+                    >
+                      {details?.rec || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* =========================================
+          2. Final Verdict (העיגול המסכם)
+          הועבר למטה וארוז ככרטיסייה מרשימה!
+      ========================================= */}
+      <div className="bg-[#303134] border border-[#5f6368] rounded-2xl p-5 sm:p-8 w-full max-w-4xl shadow-xl mb-8 flex flex-col items-center">
+        <h3 className="text-2xl text-[#e8eaed] mb-8 border-b border-[#5f6368] pb-4 font-medium w-full text-left">
+          Final Compatibility Verdict
+        </h3>
+        <div className="relative flex flex-col items-center mb-4">
+          <div className="relative w-64 h-64 flex items-center justify-center">
+            <svg
+              className="absolute top-0 left-0 w-full h-full transform -rotate-90 drop-shadow-xl transition-all duration-500"
+              style={{ filter: `drop-shadow(0 0 25px ${overallColor}40)` }}
             >
-              {overallPercent}%
-            </span>
-            <p className="text-[#e8eaed] mt-3 font-medium text-lg tracking-wide">
-              {overallText}
-            </p>
+              <circle
+                cx="128"
+                cy="128"
+                r={radius}
+                stroke="#202124"
+                strokeWidth="16"
+                fill="transparent"
+              />
+              <circle
+                cx="128"
+                cy="128"
+                r={radius}
+                stroke={overallColor}
+                strokeWidth="16"
+                fill="transparent"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
+              />
+            </svg>
+            <div className="text-center z-10 flex flex-col items-center mt-2">
+              <span
+                className="text-5xl sm:text-6xl font-bold"
+                style={{ color: overallColor }}
+              >
+                {overallPercent}%
+              </span>
+              <p className="text-[#e8eaed] mt-3 font-medium text-lg tracking-wide">
+                {overallText}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* אזור ה-Deal של CheapShark */}
+      {/* =========================================
+          3. אזור ה-Deal של CheapShark
+      ========================================= */}
       {isGamePlayable(data) && (
-        <div className="w-full max-w-lg mb-12">
+        <div className="w-full max-w-4xl mb-12">
           {dealLoading ? (
             <div className="bg-[#202124] rounded-xl p-5 border border-[#3c4043] flex flex-col items-center justify-center gap-3">
               <div className="w-6 h-6 border-2 border-[#FBBC05] border-t-transparent rounded-full animate-spin"></div>
@@ -409,144 +585,9 @@ export default function Result() {
       )}
 
       {/* =========================================
-          Detailed Specs Cards (גרפים מפורטים)
+          4. כפתורי פעולה
       ========================================= */}
-      <div className="bg-[#303134] border border-[#5f6368] rounded-2xl p-5 sm:p-8 w-full max-w-4xl shadow-xl mt-4">
-        {/* אזהרת צוואר בקבוק אם קיים */}
-        {bottleneck && (
-          <div className="w-full bg-gradient-to-r from-[#EA4335]/20 to-[#202124] border border-[#EA4335]/50 p-4 rounded-xl mb-8 flex items-start sm:items-center gap-4">
-            <span className="text-2xl mt-1 sm:mt-0">⚠️</span>
-            <div>
-              <h4 className="text-[#EA4335] font-bold">
-                Performance Bottleneck Detected
-              </h4>
-              <p className="text-[#e8eaed] text-sm">
-                Your{" "}
-                <span className="font-bold text-white bg-white/10 px-1 rounded">
-                  {bottleneck}
-                </span>{" "}
-                is the weakest link holding back performance.
-              </p>
-            </div>
-          </div>
-        )}
-
-        <h3 className="text-2xl text-[#e8eaed] mb-6 border-b border-[#5f6368] pb-4 font-medium">
-          Detailed Hardware Analysis
-        </h3>
-
-        <div className="flex flex-col gap-6">
-          {/* הרצת לולאה על 3 הרכיבים במקום לשכפל קוד */}
-          {hardwareParts.map((part) => {
-            const compData = data.components[part.id]; // המילה: optimal/okay/weak
-            const scoreData = data.componentScores
-              ? data.componentScores[part.id]
-              : null;
-            const details = data.specsDetails[part.id];
-
-            // הגדרת משתני התקדמות
-            const partPercent = scoreData
-              ? scoreData.score
-              : compData === "optimal"
-                ? 100
-                : compData === "okay"
-                  ? 75
-                  : 30;
-            const partColor =
-              partPercent >= 100
-                ? "#34A853"
-                : partPercent >= 50
-                  ? "#FBBC05"
-                  : "#EA4335";
-            const partStatusText =
-              partPercent >= 100
-                ? "Meets Recommended"
-                : partPercent >= 50
-                  ? "Meets Minimum"
-                  : "Below Minimum";
-
-            return (
-              <div
-                key={part.id}
-                className="flex flex-col bg-[#202124] p-4 sm:p-6 rounded-xl border border-[#3c4043] shadow-inner gap-4"
-              >
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-[#3c4043] pb-3 gap-2 sm:gap-0">
-                  <span className="text-xl text-[#e8eaed] font-bold">
-                    {part.label}
-                  </span>
-                  <span
-                    className="text-lg font-bold"
-                    style={{ color: partColor }}
-                  >
-                    {scoreData ? `${partPercent}% - ` : ""}
-                    {partStatusText}
-                  </span>
-                </div>
-
-                {/* בר ההתקדמות החדש! */}
-                <div className="mt-2 mb-4">
-                  <div className="relative w-full h-3 bg-[#1a1b1e] rounded-full overflow-hidden border border-[#3c4043]">
-                    {/* המילוי שזז */}
-                    <div
-                      className="absolute top-0 left-0 h-full transition-all duration-1000 ease-out rounded-full"
-                      style={{
-                        width: `${partPercent}%`,
-                        backgroundColor: partColor,
-                      }}
-                    ></div>
-                    {/* קווים מנחים - מינימום ב-50%, מומלץ ב-99% */}
-                    <div
-                      className="absolute top-0 bottom-0 left-[50%] border-l-2 border-white/30 border-dashed"
-                      title="Minimum Requirement"
-                    ></div>
-                    <div
-                      className="absolute top-0 bottom-0 left-[99%] border-l-2 border-white/30 border-dashed"
-                      title="Recommended Requirement"
-                    ></div>
-                  </div>
-                  {/* טקסט מתחת לבר */}
-                  <div className="relative w-full text-[10px] text-[#9aa0a6] font-bold uppercase tracking-wider h-4 mt-1">
-                    <span className="absolute left-0">Weak</span>
-                    <span className="absolute left-[50%] -translate-x-1/2">
-                      Minimum
-                    </span>
-                    <span className="absolute right-0">Rec.</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mt-2">
-                  <div className="flex flex-col">
-                    <span className="text-[#9aa0a6] mb-1 font-medium">
-                      Your {part.label}
-                    </span>
-                    <span className="text-[#8ab4f8] font-semibold">
-                      {cleanHardwareName(details?.user)}
-                    </span>{" "}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[#9aa0a6] mb-1 font-medium">
-                      Minimum
-                    </span>
-                    <span className="text-[#e8eaed]">
-                      {details?.min || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[#9aa0a6] mb-1 font-medium">
-                      Recommended
-                    </span>
-                    <span className="text-[#e8eaed]">
-                      {details?.rec || "N/A"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="mt-12 flex flex-col sm:flex-row flex-wrap justify-center gap-4 w-full max-w-4xl">
+      <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4 w-full max-w-4xl">
         <button
           onClick={() => navigate(`/details/${gameId}`)}
           className="px-8 py-3 border border-[#8ab4f8] text-[#8ab4f8] hover:bg-[#8ab4f8] hover:text-[#202124] rounded-full font-bold transition-all"
