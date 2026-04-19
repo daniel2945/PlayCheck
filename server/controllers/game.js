@@ -314,7 +314,7 @@ const clearAllGames = async (req, res, next) => {
 // פילטר סופי שמתקן טקסטים של VRAM בלבד
 const fixGpuVramText = (text) => {
   if (!text || text === "Not specified by developer") return text;
-  
+
   // אם הטקסט הוא רק מספר עם GB/MB (למשל "1 GB")
   if (/^\d+(\.\d+)?\s*(mb|gb|vram)\s*$/i.test(text.trim())) {
     return `Any GPU with ${text.trim().toUpperCase()} VRAM`;
@@ -410,7 +410,7 @@ const getOrFetchGame = async (gameId) => {
 
   await game.save();
   return game;
-};;
+};
 
 const checkCompatibilityGuest = async (req, res, next) => {
   try {
@@ -440,7 +440,7 @@ const checkCompatibilityGuest = async (req, res, next) => {
     }
 
     const { minimum, recommended } = game.requirements;
-    
+
     // הפונקציה המקורית - שומרת על תאימות לאחור
     const getComponentGrade = (userScore, minScore, recScore) => {
       if (userScore < minScore) return "weak";
@@ -451,34 +451,67 @@ const checkCompatibilityGuest = async (req, res, next) => {
     // --- תוספת חדשה: חישוב מתמטי מדויק באחוזים ---
     const getDetailedPercents = (userScore, minScore, recScore) => {
       const safeMin = minScore || 1;
-      const safeRec = (recScore && recScore > safeMin) ? recScore : safeMin * 1.5;
+      const safeRec = recScore && recScore > safeMin ? recScore : safeMin * 1.5;
 
-      let minPercent = Math.min(Math.round((userScore / safeMin) * 100), 100);
-      let recPercent = Math.min(Math.round((userScore / safeRec) * 100), 100);
+      // Helper for diminishing returns (Logarithmic Scaling) above 100%
+      const calcDiminishing = (val, req) => {
+        const ratio = val / req;
+        return ratio <= 1
+          ? Math.round(ratio * 100)
+          : 100 + Math.round(Math.sqrt(ratio - 1) * 50);
+      };
+
+      let minPercent = calcDiminishing(userScore, safeMin);
+      let recPercent = calcDiminishing(userScore, safeRec);
 
       let score = 0;
       if (userScore < safeMin) {
-        score = Math.round((userScore / safeMin) * 49); // ציון 0-49
+        score = Math.round((userScore / safeMin) * 49);
       } else if (userScore < safeRec) {
         const progress = userScore - safeMin;
         const range = safeRec - safeMin;
-        score = 50 + Math.round((progress / range) * 49); // ציון 50-99
+        score = 50 + Math.round((progress / range) * 49);
       } else {
-        score = 100; // ציון מושלם
+        const ratio = userScore / safeRec;
+        score = 100 + Math.round(Math.sqrt(ratio - 1) * 50);
       }
 
       return { minPercent, recPercent, score };
     };
     // ----------------------------------------------
 
-    const cpuGrade = getComponentGrade(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
-    const gpuGrade = getComponentGrade(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
-    const ramGrade = getComponentGrade(ramUser, minimum.ramGb, recommended.ramGb);
+    const cpuGrade = getComponentGrade(
+      cpuUser.benchmarkScore,
+      minimum.cpuScore,
+      recommended.cpuScore,
+    );
+    const gpuGrade = getComponentGrade(
+      gpuUser.benchmarkScore,
+      minimum.gpuScore,
+      recommended.gpuScore,
+    );
+    const ramGrade = getComponentGrade(
+      ramUser,
+      minimum.ramGb,
+      recommended.ramGb,
+    );
 
     // הפעלת החישוב החדש
-    const cpuDetails = getDetailedPercents(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
-    const gpuDetails = getDetailedPercents(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
-    const ramDetails = getDetailedPercents(ramUser, minimum.ramGb, recommended.ramGb);
+    const cpuDetails = getDetailedPercents(
+      cpuUser.benchmarkScore,
+      minimum.cpuScore,
+      recommended.cpuScore,
+    );
+    const gpuDetails = getDetailedPercents(
+      gpuUser.benchmarkScore,
+      minimum.gpuScore,
+      recommended.gpuScore,
+    );
+    const ramDetails = getDetailedPercents(
+      ramUser,
+      minimum.ramGb,
+      recommended.ramGb,
+    );
 
     let overallGrade = "optimal";
     const grades = [cpuGrade, gpuGrade, ramGrade];
@@ -486,7 +519,11 @@ const checkCompatibilityGuest = async (req, res, next) => {
     else if (grades.includes("okay")) overallGrade = "okay";
 
     // הציון הכללי של המחשב הוא לפי צוואר הבקבוק (הרכיב הכי חלש)
-    const overallScore = Math.min(cpuDetails.score, gpuDetails.score, ramDetails.score);
+    const overallScore = Math.min(
+      cpuDetails.score,
+      gpuDetails.score,
+      ramDetails.score,
+    );
 
     res.status(200).json({
       success: true,
@@ -556,7 +593,7 @@ const checkCompatibilityUser = async (req, res, next) => {
     }
 
     const { minimum, recommended } = game.requirements;
-    
+
     // הפונקציה המקורית
     const getComponentGrade = (userScore, minScore, recScore) => {
       if (userScore < minScore) return "weak";
@@ -567,34 +604,67 @@ const checkCompatibilityUser = async (req, res, next) => {
     // --- תוספת חדשה: חישוב מתמטי מדויק באחוזים ---
     const getDetailedPercents = (userScore, minScore, recScore) => {
       const safeMin = minScore || 1;
-      const safeRec = (recScore && recScore > safeMin) ? recScore : safeMin * 1.5;
+      const safeRec = recScore && recScore > safeMin ? recScore : safeMin * 1.5;
 
-      let minPercent = Math.min(Math.round((userScore / safeMin) * 100), 100);
-      let recPercent = Math.min(Math.round((userScore / safeRec) * 100), 100);
+      // Helper for diminishing returns (Logarithmic Scaling) above 100%
+      const calcDiminishing = (val, req) => {
+        const ratio = val / req;
+        return ratio <= 1
+          ? Math.round(ratio * 100)
+          : 100 + Math.round(Math.sqrt(ratio - 1) * 50);
+      };
+
+      let minPercent = calcDiminishing(userScore, safeMin);
+      let recPercent = calcDiminishing(userScore, safeRec);
 
       let score = 0;
       if (userScore < safeMin) {
-        score = Math.round((userScore / safeMin) * 49); 
+        score = Math.round((userScore / safeMin) * 49);
       } else if (userScore < safeRec) {
         const progress = userScore - safeMin;
         const range = safeRec - safeMin;
-        score = 50 + Math.round((progress / range) * 49); 
+        score = 50 + Math.round((progress / range) * 49);
       } else {
-        score = 100; 
+        const ratio = userScore / safeRec;
+        score = 100 + Math.round(Math.sqrt(ratio - 1) * 50);
       }
 
       return { minPercent, recPercent, score };
     };
     // ----------------------------------------------
 
-    const cpuGrade = getComponentGrade(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
-    const gpuGrade = getComponentGrade(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
-    const ramGrade = getComponentGrade(ramUser, minimum.ramGb, recommended.ramGb);
+    const cpuGrade = getComponentGrade(
+      cpuUser.benchmarkScore,
+      minimum.cpuScore,
+      recommended.cpuScore,
+    );
+    const gpuGrade = getComponentGrade(
+      gpuUser.benchmarkScore,
+      minimum.gpuScore,
+      recommended.gpuScore,
+    );
+    const ramGrade = getComponentGrade(
+      ramUser,
+      minimum.ramGb,
+      recommended.ramGb,
+    );
 
     // הפעלת החישוב החדש
-    const cpuDetails = getDetailedPercents(cpuUser.benchmarkScore, minimum.cpuScore, recommended.cpuScore);
-    const gpuDetails = getDetailedPercents(gpuUser.benchmarkScore, minimum.gpuScore, recommended.gpuScore);
-    const ramDetails = getDetailedPercents(ramUser, minimum.ramGb, recommended.ramGb);
+    const cpuDetails = getDetailedPercents(
+      cpuUser.benchmarkScore,
+      minimum.cpuScore,
+      recommended.cpuScore,
+    );
+    const gpuDetails = getDetailedPercents(
+      gpuUser.benchmarkScore,
+      minimum.gpuScore,
+      recommended.gpuScore,
+    );
+    const ramDetails = getDetailedPercents(
+      ramUser,
+      minimum.ramGb,
+      recommended.ramGb,
+    );
 
     let overallGrade = "optimal";
     const grades = [cpuGrade, gpuGrade, ramGrade];
@@ -602,7 +672,11 @@ const checkCompatibilityUser = async (req, res, next) => {
     else if (grades.includes("okay")) overallGrade = "okay";
 
     // הציון הכללי של המחשב הוא לפי צוואר הבקבוק (הרכיב הכי חלש)
-    const overallScore = Math.min(cpuDetails.score, gpuDetails.score, ramDetails.score);
+    const overallScore = Math.min(
+      cpuDetails.score,
+      gpuDetails.score,
+      ramDetails.score,
+    );
 
     currentUser.searchHistory = currentUser.searchHistory.filter(
       (item) => item.gameId.toString() !== gameId.toString(),
