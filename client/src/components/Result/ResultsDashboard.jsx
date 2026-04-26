@@ -10,8 +10,6 @@ export default function ResultsDashboard({
   const [editingPart, setEditingPart] = useState(null);
   const [hardwareList, setHardwareList] = useState({ cpus: [], gpus: [] });
   const [testSpecs, setTestSpecs] = useState({ cpuId: "", gpuId: "", ramGb: 16 });
-  
-  // הסטייט החדש שלנו כדי לנהל את הטעינה הנקודתית
   const [isHardwareLoading, setIsHardwareLoading] = useState(false);
 
   useEffect(() => {
@@ -36,13 +34,28 @@ export default function ResultsDashboard({
   const hasBottleneck = minScore < 80;
 
   const hardwareComponents = [
-    { id: "cpu", title: "CPU", icon: "🧠", score: cpuScore, userSpec: data.specsDetails?.cpu?.user, reqSpec: data.specsDetails?.cpu?.rec },
-    { id: "gpu", title: "GPU", icon: "🎮", score: gpuScore, userSpec: data.specsDetails?.gpu?.user, reqSpec: data.specsDetails?.gpu?.rec },
-    { id: "ram", title: "RAM", icon: "⚡", score: ramScore, userSpec: data.specsDetails?.ram?.user, reqSpec: data.specsDetails?.ram?.rec },
+    { 
+      id: "cpu", title: "CPU", icon: "🧠", score: cpuScore, 
+      userSpec: data.specsDetails?.cpu?.user, 
+      minSpec: data.specsDetails?.cpu?.min,
+      reqSpec: data.specsDetails?.cpu?.rec 
+    },
+    { 
+      id: "gpu", title: "GPU", icon: "🎮", score: gpuScore, 
+      userSpec: data.specsDetails?.gpu?.user, 
+      minSpec: data.specsDetails?.gpu?.min,
+      reqSpec: data.specsDetails?.gpu?.rec 
+    },
+    { 
+      id: "ram", title: "RAM", icon: "⚡", score: ramScore, 
+      userSpec: data.specsDetails?.ram?.user, 
+      minSpec: data.specsDetails?.ram?.min,
+      reqSpec: data.specsDetails?.ram?.rec 
+    },
   ];
 
   const cleanHardwareName = (name) => {
-    if (!name) return "N/A";
+    if (!name || name.toUpperCase() === "UNKNOWN") return "Not specified";
     const parts = name.split(" ");
     if (parts.length > 1 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
       return parts.slice(1).join(" ");
@@ -50,11 +63,14 @@ export default function ResultsDashboard({
     return name;
   };
 
+  const formatSpec = (spec) => {
+    if (!spec || spec.toUpperCase() === "UNKNOWN") return "Not specified";
+    return spec;
+  };
+
   const openEditMode = async (partId) => {
-    // 1. קודם כל ולפני הכל - פותחים את חלון העריכה כדי לתת פידבק מיידי למשתמש!
     setEditingPart(partId);
 
-    // 2. רק אם חסר לנו המידע, נפנה לשרת
     if (hardwareList.cpus.length === 0) {
       setIsHardwareLoading(true);
       try {
@@ -72,7 +88,6 @@ export default function ResultsDashboard({
           const matchedGpu = gpus.find(g => cleanHardwareName(`${g.brand} ${g.model}`) === currentGpuStr) || gpus[0];
           const matchedRam = currentRamStr ? parseInt(currentRamStr) : 16;
 
-          // מעדכנים את הברירת מחדל עם מה שמצאנו
           setTestSpecs(prev => ({
             cpuId: prev.cpuId || matchedCpu?._id || "",
             gpuId: prev.gpuId || matchedGpu?._id || "",
@@ -114,7 +129,9 @@ export default function ResultsDashboard({
       <div className="absolute bottom-[-10%] left-[30%] w-[400px] h-[400px] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
 
       <div className="relative z-10 flex flex-col">
-        {isSimulating && (
+        
+        {/* אזור ההתראות: מצב סימולציה לעומת טיפ רגיל */}
+        {isSimulating ? (
           <div className="flex justify-between items-center bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 mb-8">
             <span className="text-cyan-400 font-bold tracking-wide">⚙️ Simulation Mode Active</span>
             <button
@@ -123,6 +140,13 @@ export default function ResultsDashboard({
             >
               Reset to My PC
             </button>
+          </div>
+        ) : (
+          <div className="flex items-start sm:items-center gap-3 bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-8 transition-all hover:bg-white/[0.04]">
+            <span className="text-xl drop-shadow-md">💡</span>
+            <p className="text-[#9aa0a6] text-sm leading-relaxed">
+              <span className="text-[#e8eaed] font-semibold">Curious about performance?</span> Click the <strong className="text-white bg-black/40 px-1.5 py-0.5 rounded border border-white/10">⚙️ icon</strong> on any component below to simulate a hardware upgrade.
+            </p>
           </div>
         )}
 
@@ -194,7 +218,6 @@ export default function ResultsDashboard({
                       Test different {comp.title}
                     </span>
                     
-                    {/* בדיקה אם אנחנו בזמן טעינה (רלוונטי רק למעבדים/כרטיסי מסך, לא ל-RAM) */}
                     {isHardwareLoading && comp.id !== 'ram' ? (
                       <div className="flex flex-col items-center justify-center flex-1 text-cyan-400">
                         <div className="w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -230,18 +253,26 @@ export default function ResultsDashboard({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 mt-auto bg-black/20 p-4 rounded-xl border border-white/5 shadow-inner">
-                    <div className="group/tooltip relative flex flex-col border-b border-white/5 pb-2 min-w-0">
-                      <span className="text-[10px] text-[#9aa0a6] uppercase tracking-widest mb-1">
+                    <div className="flex flex-col border-b border-white/5 pb-3">
+                      <span className="text-[9px] text-[#8ab4f8] uppercase tracking-widest mb-1">
                         {isSimulating ? "Simulated PC" : "Your PC"}
                       </span>
-                      <span className="text-sm font-medium text-[#8ab4f8] truncate block w-full cursor-help">
+                      <span className="text-xs font-medium text-white/90 leading-relaxed">
                         {cleanHardwareName(comp.userSpec)}
                       </span>
                     </div>
-                    <div className="group/tooltip relative flex flex-col min-w-0">
-                      <span className="text-[10px] text-[#9aa0a6] uppercase tracking-widest mb-1">Recommended</span>
-                      <span className="text-sm font-medium text-[#e8eaed] truncate block w-full cursor-help">
-                        {comp.reqSpec || "N/A"}
+
+                    <div className="flex flex-col border-b border-white/5 pb-3">
+                      <span className="text-[9px] text-[#9aa0a6] uppercase tracking-widest mb-1">Minimum</span>
+                      <span className="text-[11px] font-medium text-white/60 leading-relaxed">
+                        {formatSpec(comp.minSpec)}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col pt-1">
+                      <span className="text-[9px] text-[#9aa0a6] uppercase tracking-widest mb-1">Recommended</span>
+                      <span className="text-[11px] font-medium text-white/60 leading-relaxed">
+                        {formatSpec(comp.reqSpec)}
                       </span>
                     </div>
                   </div>
