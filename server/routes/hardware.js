@@ -10,11 +10,13 @@ const {
   autoDetectHardware,
   syncSubmit,
   syncStatus,
+  getUpgradeRecommendations
 } = require("../controllers/hardware");
 
 const { verifyToken, forAdmins, forOwner } = require("../middlewares/auth");
 
 hardwareRouter.get("/search", searchHardware);
+hardwareRouter.get("/upgrades/:type", getUpgradeRecommendations);
 
 // Auto-Detect PC Specs
 hardwareRouter.post("/auto-detect", autoDetectHardware);
