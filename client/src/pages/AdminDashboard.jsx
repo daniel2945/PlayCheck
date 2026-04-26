@@ -76,7 +76,7 @@ export default function AdminDashboard() {
     setError("");
     try {
       if (activeTab === "users") {
-        const data = await API_CALL("/api/auth");
+        const data = await API_CALL("/api/admin");
         if (data.success) setUsers(data.data);
       } else if (activeTab === "games") {
         const data = await API_CALL("/api/game?limit=1000");
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
               onClick={async () => {
                 toast.dismiss(t.id);
                 try {
-                  await API_CALL(`/api/auth/${userId}`, "DELETE");
+                  await API_CALL(`/api/admin/${userId}`, "DELETE");
                   setUsers(users.filter((u) => u._id !== userId));
                   toast.success("User deleted successfully");
                 } catch (err) {
@@ -157,24 +157,24 @@ export default function AdminDashboard() {
 
       // 1. עדכון שם משתמש (רק אם שונה)
       if (userForm.userName !== originalUser.userName) {
-        await API_CALL(`/api/auth/${userForm._id}/name`, "PUT", { userName: userForm.userName });
+        await API_CALL(`/api/admin/${userForm._id}/name`, "PUT", { userName: userForm.userName });
         updatedData.userName = userForm.userName;
       }
 
       // 2. עדכון אימייל (רק אם שונה - מנהל ובעלים יכולים לעשות את זה)
       if (userForm.email !== originalUser.email) {
-        await API_CALL(`/api/auth/${userForm._id}/email`, "PUT", { email: userForm.email });
+        await API_CALL(`/api/admin/${userForm._id}/email`, "PUT", { email: userForm.email });
         updatedData.email = userForm.email;
       }
 
       // 3. עדכון סיסמה (רק אם הוזנה חדשה)
       if (userForm.newPassword && userForm.newPassword.trim() !== "") {
-        await API_CALL(`/api/auth/${userForm._id}/password`, "PUT", { password: userForm.newPassword });
+        await API_CALL(`/api/admin/${userForm._id}/password`, "PUT", { password: userForm.newPassword });
       }
 
       // 4. עדכון תפקיד (רק בעלים יכול)
       if (isOwner && userForm.role !== originalUser.role) {
-        await API_CALL(`/api/auth/${userForm._id}/role`, "PUT", { role: userForm.role });
+        await API_CALL(`/api/admin/${userForm._id}/role`, "PUT", { role: userForm.role });
         updatedData.role = userForm.role;
       }
 

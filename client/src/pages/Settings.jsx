@@ -104,7 +104,7 @@ export default function Settings() {
               onClick={async () => {
                 toast.dismiss(t.id);
                 try {
-                  await API_CALL(`/api/auth/${user._id}`, "DELETE");
+                  await API_CALL("/api/auth/me", "DELETE");
                   logout();
                   navigate("/");
                 } catch (err) {
