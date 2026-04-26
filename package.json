@@ -1,0 +1,26 @@
+{
+  "name": "playcheck",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daniel2945/PlayCheck.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/daniel2945/PlayCheck/issues"
+  },
+  "homepage": "https://github.com/daniel2945/PlayCheck#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
