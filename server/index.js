@@ -4,24 +4,23 @@ const cors = require("cors");
 const errorHandler = require("./middlewares/errorHandler");
 const mongoose = require("mongoose");
 const authRouter = require("./routes/auth");
+const adminRouter = require("./routes/admin");
 const hardwareRouter = require("./routes/hardware");
 const userRouter = require("./routes/user");
 const gameRouter = require("./routes/game");
 const reviewRouter = require("./routes/review");
 const { initializeHardwareCache } = require("./controllers/game");
 
-
 const app = express();
 const PORT = process.env.PORT;
 app.use(cors());
 app.use(express.json());
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/hardware", hardwareRouter);
 app.use("/api/user", userRouter);
 app.use("/api/game", gameRouter);
 app.use("/api/review", reviewRouter);
-
-
 
 app.use(errorHandler);
 

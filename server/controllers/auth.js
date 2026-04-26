@@ -58,6 +58,7 @@ const login = async (req, res, next) => {
 
     console.log("Login Attempt Data:", { userFound: !!user, passwordFieldExists: !!user?.password });
 
+    // חוסם משתמשים שנרשמו עם גוגל (ואין להם סיסמה רגילה) מלנסות להתחבר פה
     if (!user.password) {
       return res.status(400).json({ success: false, data: "Please log in with Google" });
     }
@@ -97,6 +98,8 @@ const googleLogin = async (req, res, next) => {
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
+    
+    // משיכת תמונת הפרופיל מגוגל
     const { email, name, sub, picture } = ticket.getPayload();
 
     let user = await User.findOne({ email })
@@ -111,6 +114,7 @@ const googleLogin = async (req, res, next) => {
         sub + process.env.JWT_SECRET,
         10,
       );
+      
       const newUser = new User({
         userName: name,
         email,
@@ -159,17 +163,6 @@ const getUser = async (req, res, next) => {
     if (!user)
       return res.status(404).json({ success: false, data: "User not found" });
     res.status(200).json({ success: true, data: user });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getAllUsers = async (req, res, next) => {
-  try {
-    const users = await User.find().select("-password");
-    if (!users)
-      return res.status(404).json({ success: false, data: "Users not found" });
-    res.status(200).json({ success: true, data: users });
   } catch (err) {
     next(err);
   }
@@ -256,104 +249,14 @@ const updateOwnEmail = async (req, res, next) => {
   }
 };
 
-// ==========================================
-// ADMIN/OWNER UPDATING OTHERS
-// כל אלו משתמשים ב- req.targetUser שהגיע מהמידלוואר!
-// ==========================================
-
-const deleteUser = async (req, res, next) => {
+const deleteOwnAccount = async (req, res, next) => {
   try {
-    // מוחקים מיד, המידלוואר כבר וידא הכל!
-    await User.findByIdAndDelete(req.targetUser._id);
-    res
-      .status(200)
-      .json({
-        success: true,
-        data: `The user ${req.targetUser.userName} was deleted successfully`,
-      });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const adminUpdateUserPassword = async (req, res, next) => {
-  try {
-    const { password } = req.body;
-    const targetUser = req.targetUser;
-
-    targetUser.password = password;
-    await targetUser.save();
-    res
-      .status(200)
-      .json({ success: true, data: "User password updated successfully" });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const adminUpdateUserName = async (req, res, next) => {
-  try {
-    const { userName } = req.body;
-    const targetUser = req.targetUser;
-
-    const isExist = await User.findOne({
-      userName,
-      _id: { $ne: targetUser._id },
-    });
-    if (isExist)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          error: "Username already taken by another user",
-        });
-
-    targetUser.userName = userName;
-    await targetUser.save();
-    res
-      .status(200)
-      .json({
-        success: true,
-        data: `User name updated to ${targetUser.userName}`,
-      });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const adminUpdateUserEmail = async (req, res, next) => {
-  try {
-    const { email } = req.body;
-    const targetUser = req.targetUser;
-
-    const isExist = await User.findOne({ email, _id: { $ne: targetUser._id } });
-    if (isExist)
-      return res
-        .status(400)
-        .json({ success: false, error: "Email already taken by another user" });
-
-    targetUser.email = email;
-    await targetUser.save();
-    res
-      .status(200)
-      .json({
-        success: true,
-        data: `User email updated to ${targetUser.email}`,
-      });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const changeRole = async (req, res, next) => {
-  try {
-    // הפונקציה הזו פתוחה רק ל-Owner דרך המידלוואר forOwner, אז אין צורך לבדוק שוב
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { role: req.body.role },
-      { new: true, select: "-password" },
-    );
-    res.status(200).json({ success: true, data: updatedUser });
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, data: "User not found" });
+    }
+    await User.findByIdAndDelete(req.user.id);
+    res.status(200).json({ success: true, data: "Account deleted successfully" });
   } catch (err) {
     next(err);
   }
@@ -363,14 +266,9 @@ module.exports = {
   register,
   login,
   googleLogin,
-  deleteUser,
-  getAllUsers,
   getUser,
-  changeRole,
   updateOwnName,
   updateOwnEmail,
   updateOwnPassword,
-  adminUpdateUserName,
-  adminUpdateUserEmail,
-  adminUpdateUserPassword,
+  deleteOwnAccount,
 };
