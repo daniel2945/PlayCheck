@@ -56,6 +56,13 @@ const login = async (req, res, next) => {
     if (!user)
       return res.status(400).json({ success: false, data: "User not found" });
 
+    console.log("Login Attempt Data:", { userFound: !!user, passwordFieldExists: !!user?.password });
+
+    // חוסם משתמשים שנרשמו עם גוגל (ואין להם סיסמה רגילה) מלנסות להתחבר פה
+    if (!user.password) {
+      return res.status(400).json({ success: false, data: "Please log in with Google" });
+    }
+
     const isVerified = await bcrypt.compare(password, user.password);
     if (!isVerified)
       return res.status(400).json({ success: false, data: "Invalid password" });
@@ -91,29 +98,41 @@ const googleLogin = async (req, res, next) => {
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
-    const { email, name, sub } = ticket.getPayload();
+    
+    // משיכת תמונת הפרופיל מגוגל
+    const { email, name, sub, picture } = ticket.getPayload();
 
     let user = await User.findOne({ email })
       .populate("myPc.cpuId")
       .populate("myPc.gpuId");
 
     if (!user) {
+      const defaultCpu = await Hardware.findOne({ type: "CPU" });
+      const defaultGpu = await Hardware.findOne({ type: "GPU" });
+
       const randomPassword = await bcrypt.hash(
         sub + process.env.JWT_SECRET,
         10,
       );
-      user = new User({
+      
+      const newUser = new User({
         userName: name,
         email,
         password: randomPassword,
         role: "user",
+        avatar: picture,
         myPc: {
-          cpuId: "000000000000000000000000",
-          gpuId: "000000000000000000000000",
+          cpuId: defaultCpu ? defaultCpu._id : null,
+          gpuId: defaultGpu ? defaultGpu._id : null,
           ramGb: 16,
         },
       });
-      await user.save();
+      await newUser.save();
+
+      // Fetch and populate the newly created user to match the existing login flow
+      user = await User.findById(newUser._id)
+        .populate("myPc.cpuId")
+        .populate("myPc.gpuId");
     }
 
     const token = jwt.sign(
