@@ -380,6 +380,35 @@ const getAllHardwares = async (req, res, next) => {
   }
 };
 
+const getUpgradeRecommendations = async (req, res, next) => {
+  try {
+    const { type } = req.params; // "CPU" or "GPU"
+    const { targetScore } = req.query; // הציון שאנחנו צריכים לעקוף
+
+    if (!type || !targetScore) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing hardware type or target score" 
+      });
+    }
+
+    const score = Number(targetScore);
+
+    // מחפשים רכיבים מאותו סוג, שהציון שלהם גדול או שווה לציון הנדרש
+    const upgrades = await Hardware.find({
+      type: type.toUpperCase(),
+      benchmarkScore: { $gte: score }
+    })
+    .sort({ benchmarkScore: 1 }) // מיון מהנמוך לגבוה - כדי להציע את השדרוג הכי חסכוני קודם!
+    .limit(3); // מחזירים רק את 3 האופציות הטובות ביותר
+
+    res.status(200).json({ success: true, data: upgrades });
+  } catch (error) {
+    console.error("Error fetching hardware upgrades:", error);
+    next(error);
+  }
+};
+
 module.exports = {
   searchHardware,
   createHardware,
@@ -389,4 +418,5 @@ module.exports = {
   autoDetectHardware,
   syncSubmit,
   syncStatus,
+  getUpgradeRecommendations
 };

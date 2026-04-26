@@ -11,6 +11,9 @@ export default function ResultsDashboard({
   const [hardwareList, setHardwareList] = useState({ cpus: [], gpus: [] });
   const [testSpecs, setTestSpecs] = useState({ cpuId: "", gpuId: "", ramGb: 16 });
   const [isHardwareLoading, setIsHardwareLoading] = useState(false);
+  
+  const [aiRecommendations, setAiRecommendations] = useState(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 100);
@@ -55,7 +58,7 @@ export default function ResultsDashboard({
   ];
 
   const cleanHardwareName = (name) => {
-    if (!name || name.toUpperCase() === "UNKNOWN") return "Not specified";
+    if (!name || name.toLowerCase().includes("unknown")) return "Not specified";
     const parts = name.split(" ");
     if (parts.length > 1 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
       return parts.slice(1).join(" ");
@@ -64,12 +67,35 @@ export default function ResultsDashboard({
   };
 
   const formatSpec = (spec) => {
-    if (!spec || spec.toUpperCase() === "UNKNOWN") return "Not specified";
+    if (!spec || spec.toLowerCase().includes("unknown")) return "Not specified";
     return spec;
+  };
+
+  const fetchAiRecommendations = async (compId) => {
+    setIsAiLoading(true);
+    setEditingPart(compId);
+    setAiRecommendations(null);
+
+    try {
+      const baseScore = data.specsDetails[compId].recScore || data.specsDetails[compId].minScore || 1000; 
+      // הורדנו ל-2% מרחב ביטחון, כדי שהציון יעמוד יפה סביב 100-105 ולא יקפוץ ל-117
+      const targetScore = Math.ceil(baseScore * 1.02); 
+      
+      const res = await API_CALL(`/api/hardware/upgrades/${compId}?targetScore=${targetScore}`);
+      
+      if (res.success) {
+        setAiRecommendations(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to get AI recommendations:", err);
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const openEditMode = async (partId) => {
     setEditingPart(partId);
+    setAiRecommendations(null); 
 
     if (hardwareList.cpus.length === 0) {
       setIsHardwareLoading(true);
@@ -130,10 +156,11 @@ export default function ResultsDashboard({
 
       <div className="relative z-10 flex flex-col">
         
-        {/* אזור ההתראות: מצב סימולציה לעומת טיפ רגיל */}
         {isSimulating ? (
-          <div className="flex justify-between items-center bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 mb-8">
-            <span className="text-cyan-400 font-bold tracking-wide">⚙️ Simulation Mode Active</span>
+          <div className="flex justify-between items-center bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 mb-8 shadow-sm">
+            <span className="text-cyan-400 font-bold tracking-wide flex items-center gap-2">
+              <span className="text-xl">⚙️</span> Simulation Mode Active
+            </span>
             <button
               onClick={resetSimulation}
               className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-lg hover:bg-rose-500 transition-colors shadow"
@@ -142,10 +169,11 @@ export default function ResultsDashboard({
             </button>
           </div>
         ) : (
-          <div className="flex items-start sm:items-center gap-3 bg-white/[0.02] border border-white/5 rounded-xl p-4 mb-8 transition-all hover:bg-white/[0.04]">
-            <span className="text-xl drop-shadow-md">💡</span>
-            <p className="text-[#9aa0a6] text-sm leading-relaxed">
-              <span className="text-[#e8eaed] font-semibold">Curious about performance?</span> Click the <strong className="text-white bg-black/40 px-1.5 py-0.5 rounded border border-white/10">⚙️ icon</strong> on any component below to simulate a hardware upgrade.
+          <div className="flex items-start sm:items-center gap-4 bg-white/[0.02] border border-white/5 rounded-xl p-5 mb-8 transition-all hover:bg-white/[0.04]">
+            <span className="text-2xl drop-shadow-md hidden sm:block">💡</span>
+            <p className="text-[#9aa0a6] text-sm leading-relaxed flex-1">
+              <span className="text-[#e8eaed] font-bold text-base block mb-1">Curious about upgrading?</span>
+              Click the <strong className="text-white bg-black/40 px-1.5 py-0.5 rounded border border-white/10 mx-1">⚙️ icon</strong> on any component below to test a manual hardware swap, or hit the <strong className="text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30 mx-1">✨ Auto Upgrade</strong> button to let us instantly find the best matching parts for you!
             </p>
           </div>
         )}
@@ -214,14 +242,67 @@ export default function ResultsDashboard({
 
                 {editingPart === comp.id ? (
                   <div className="flex flex-col gap-3 mt-auto bg-black/60 p-4 rounded-xl border border-cyan-500/50 shadow-inner animate-in fade-in duration-200 z-20 min-h-[140px]">
-                    <span className="text-cyan-400 font-bold uppercase tracking-wider text-[11px]">
-                      Test different {comp.title}
-                    </span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-cyan-400 font-bold uppercase tracking-wider text-[11px]">
+                        {aiRecommendations ? "Select Upgrade" : `Test different ${comp.title}`}
+                      </span>
+                      {comp.id !== 'ram' && !aiRecommendations && !isAiLoading && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); fetchAiRecommendations(comp.id); }}
+                          className="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-[10px] uppercase font-bold hover:bg-emerald-500/20 transition-colors shadow-sm"
+                        >
+                          ✨ Auto Upgrade
+                        </button>
+                      )}
+                    </div>
                     
-                    {isHardwareLoading && comp.id !== 'ram' ? (
-                      <div className="flex flex-col items-center justify-center flex-1 text-cyan-400">
+                    {isHardwareLoading && comp.id !== 'ram' && !isAiLoading ? (
+                      <div className="flex flex-col items-center justify-center flex-1 text-cyan-400 py-4">
                         <div className="w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mb-2"></div>
                         <span className="text-[10px] uppercase tracking-wider">Loading Data...</span>
+                      </div>
+                    ) : isAiLoading ? (
+                      <div className="flex flex-col items-center justify-center flex-1 text-emerald-400 py-4">
+                        <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+                        <span className="text-[10px] uppercase tracking-wider">Finding best options...</span>
+                      </div>
+                    ) : aiRecommendations ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-1.5">
+                          {aiRecommendations.length > 0 ? aiRecommendations.map(rec => (
+                            <div
+                              key={rec._id}
+                              onClick={() => setTestSpecs({...testSpecs, [`${comp.id}Id`]: rec._id})}
+                              className={`p-2 rounded-lg border cursor-pointer transition-colors flex justify-between items-center ${
+                                testSpecs[`${comp.id}Id`] === rec._id
+                                  ? "bg-emerald-500/20 border-emerald-400"
+                                  : "bg-[#09090b] border-white/10 hover:border-emerald-500/50"
+                              }`}
+                            >
+                              <span className="text-xs font-bold text-white truncate max-w-[70%]">{rec.brand} {rec.model}</span>
+                              <span className="text-[10px] text-emerald-400 font-black bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm">
+                                {rec.benchmarkScore} Pts
+                              </span>
+                            </div>
+                          )) : (
+                            <div className="text-xs text-[#9aa0a6] text-center py-2">No suitable upgrades found in DB.</div>
+                          )}
+                        </div>
+
+                        <p className="text-[9px] text-[#9aa0a6] text-center mt-1 leading-tight px-1">
+                          * AI suggestions aim for optimal performance. Actual results may vary.
+                        </p>
+
+                        <div className="flex justify-between items-center mt-2">
+                          <button onClick={() => setAiRecommendations(null)} className="text-[10px] text-[#9aa0a6] hover:text-white underline transition-colors">Manual Search</button>
+                          <button
+                            onClick={handleTestSubmit}
+                            disabled={!testSpecs[`${comp.id}Id`]}
+                            className="bg-cyan-500 text-black font-bold px-4 py-1.5 rounded hover:bg-cyan-400 transition-colors shadow disabled:opacity-50 text-sm"
+                          >
+                            Simulate
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <>
@@ -302,7 +383,7 @@ export default function ResultsDashboard({
               <h3 className="text-2xl text-[#e8eaed] mb-8 border-b border-white/10 pb-4 font-bold w-full text-left drop-shadow-lg flex items-center gap-3">
                 Final Compatibility Verdict
                 {isSimulating && (
-                  <span className="text-[10px] bg-cyan-500 text-black px-2 py-1 rounded-full font-bold uppercase tracking-wider animate-pulse">
+                  <span className="text-[10px] bg-cyan-500 text-black px-2 py-1 rounded-full font-bold uppercase tracking-wider animate-pulse shadow-sm">
                     Simulated Result
                   </span>
                 )}

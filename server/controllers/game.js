@@ -533,21 +533,27 @@ const checkCompatibilityGuest = async (req, res, next) => {
         overallScore: overallScore, // התווסף
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
         componentScores: { cpu: cpuDetails, gpu: gpuDetails, ram: ramDetails }, // התווסף
-        specsDetails: {
+specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,
             min: minimum.cpuText || "Not specified by developer",
             rec: recommended.cpuText || "Not specified by developer",
+            minScore: minimum.cpuScore, // ✨ הוספנו את זה
+            recScore: recommended.cpuScore, // ✨ הוספנו את זה
           },
           gpu: {
             user: `${gpuUser.brand} ${gpuUser.model}`,
             min: minimum.gpuText || "Not specified by developer",
             rec: recommended.gpuText || "Not specified by developer",
+            minScore: minimum.gpuScore, // ✨ הוספנו את זה
+            recScore: recommended.gpuScore, // ✨ הוספנו את זה
           },
           ram: {
             user: formatRam(ramUser),
             min: formatRam(minimum.ramGb),
             rec: formatRam(recommended.ramGb),
+            minScore: minimum.ramGb, // ✨ הוספנו את זה
+            recScore: recommended.ramGb, // ✨ הוספנו את זה
           },
         },
       },
@@ -701,21 +707,27 @@ const checkCompatibilityUser = async (req, res, next) => {
         overallScore: overallScore, // התווסף
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
         componentScores: { cpu: cpuDetails, gpu: gpuDetails, ram: ramDetails }, // התווסף
-        specsDetails: {
+specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,
             min: minimum.cpuText || "Not specified by developer",
             rec: recommended.cpuText || "Not specified by developer",
+            minScore: minimum.cpuScore, // ✨ הוספנו את זה
+            recScore: recommended.cpuScore, // ✨ הוספנו את זה
           },
           gpu: {
             user: `${gpuUser.brand} ${gpuUser.model}`,
             min: minimum.gpuText || "Not specified by developer",
             rec: recommended.gpuText || "Not specified by developer",
+            minScore: minimum.gpuScore, // ✨ הוספנו את זה
+            recScore: recommended.gpuScore, // ✨ הוספנו את זה
           },
           ram: {
             user: formatRam(ramUser),
             min: formatRam(minimum.ramGb),
             rec: formatRam(recommended.ramGb),
+            minScore: minimum.ramGb, // ✨ הוספנו את זה
+            recScore: recommended.ramGb, // ✨ הוספנו את זה
           },
         },
       },
