@@ -78,7 +78,7 @@ export default function ResultsDashboard({
 
     try {
       const baseScore = data.specsDetails[compId].recScore || data.specsDetails[compId].minScore || 1000; 
-      // הורדנו ל-2% מרחב ביטחון, כדי שהציון יעמוד יפה סביב 100-105 ולא יקפוץ ל-117
+      // 2% מרחב ביטחון, כדי שהציון יעמוד סביב 100-105 בצורה אופטימלית
       const targetScore = Math.ceil(baseScore * 1.02); 
       
       const res = await API_CALL(`/api/hardware/upgrades/${compId}?targetScore=${targetScore}`);
