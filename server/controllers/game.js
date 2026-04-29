@@ -533,20 +533,22 @@ const checkCompatibilityGuest = async (req, res, next) => {
         overallScore: overallScore, // התווסף
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
         componentScores: { cpu: cpuDetails, gpu: gpuDetails, ram: ramDetails }, // התווסף
-specsDetails: {
+        specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,
+            userScore: cpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
             min: minimum.cpuText || "Not specified by developer",
             rec: recommended.cpuText || "Not specified by developer",
-            minScore: minimum.cpuScore, // ✨ הוספנו את זה
-            recScore: recommended.cpuScore, // ✨ הוספנו את זה
+            minScore: minimum.cpuScore,
+            recScore: recommended.cpuScore,
           },
           gpu: {
             user: `${gpuUser.brand} ${gpuUser.model}`,
+            userScore: gpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
             min: minimum.gpuText || "Not specified by developer",
             rec: recommended.gpuText || "Not specified by developer",
-            minScore: minimum.gpuScore, // ✨ הוספנו את זה
-            recScore: recommended.gpuScore, // ✨ הוספנו את זה
+            minScore: minimum.gpuScore,
+            recScore: recommended.gpuScore,
           },
           ram: {
             user: formatRam(ramUser),
@@ -707,20 +709,22 @@ const checkCompatibilityUser = async (req, res, next) => {
         overallScore: overallScore, // התווסף
         components: { cpu: cpuGrade, gpu: gpuGrade, ram: ramGrade },
         componentScores: { cpu: cpuDetails, gpu: gpuDetails, ram: ramDetails }, // התווסף
-specsDetails: {
+        specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,
+            userScore: cpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
             min: minimum.cpuText || "Not specified by developer",
             rec: recommended.cpuText || "Not specified by developer",
-            minScore: minimum.cpuScore, // ✨ הוספנו את זה
-            recScore: recommended.cpuScore, // ✨ הוספנו את זה
+            minScore: minimum.cpuScore,
+            recScore: recommended.cpuScore,
           },
           gpu: {
             user: `${gpuUser.brand} ${gpuUser.model}`,
+            userScore: gpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
             min: minimum.gpuText || "Not specified by developer",
             rec: recommended.gpuText || "Not specified by developer",
-            minScore: minimum.gpuScore, // ✨ הוספנו את זה
-            recScore: recommended.gpuScore, // ✨ הוספנו את זה
+            minScore: minimum.gpuScore,
+            recScore: recommended.gpuScore,
           },
           ram: {
             user: formatRam(ramUser),

@@ -379,28 +379,41 @@ const getAllHardwares = async (req, res, next) => {
     next(error);
   }
 };
-
 const getUpgradeRecommendations = async (req, res, next) => {
   try {
     const { type } = req.params; // "CPU" or "GPU"
-    const { targetScore } = req.query; // הציון שאנחנו צריכים לעקוף
+    // מקבלים את הציון של המשתמש ואת הציון המומלץ של המשחק מהבקשה
+    const { userScore, recommendedScore } = req.query; 
 
-    if (!type || !targetScore) {
+    if (!type || !userScore || !recommendedScore) {
       return res.status(400).json({ 
         success: false, 
-        message: "Missing hardware type or target score" 
+        message: "Missing hardware type, user score, or recommended score" 
       });
     }
 
-    const score = Number(targetScore);
+    const currentScore = Number(userScore);
+    const recScore = Number(recommendedScore);
 
-    // מחפשים רכיבים מאותו סוג, שהציון שלהם גדול או שווה לציון הנדרש
+    let targetScoreThreshold = 0;
+
+    // לוגיקת בחירת הציון לשדרוג:
+    if (currentScore < recScore) {
+      // המשתמש מתחת למומלץ: נביא את הקרוב ביותר מעל המומלץ + מרווח ביטחון (למשל 5%)
+      const safetyMargin = 1.05; 
+      targetScoreThreshold = recScore * safetyMargin;
+    } else {
+      // המשתמש מעל המומלץ: נביא את הבא אחריו ב-10% לפחות מעל הציון הנוכחי שלו
+      targetScoreThreshold = currentScore * 1.10;
+    }
+
+    // מחפשים רכיבים מאותו סוג, שהציון שלהם גדול או שווה לסף שחישבנו
     const upgrades = await Hardware.find({
       type: type.toUpperCase(),
-      benchmarkScore: { $gte: score }
+      benchmarkScore: { $gte: targetScoreThreshold }
     })
-    .sort({ benchmarkScore: 1 }) // מיון מהנמוך לגבוה - כדי להציע את השדרוג הכי חסכוני קודם!
-    .limit(3); // מחזירים רק את 3 האופציות הטובות ביותר
+    .sort({ benchmarkScore: 1 }) // מיון מהנמוך לגבוה כדי להביא את הכי קרוב לסף
+    .limit(3); // מחזירים את 3 האופציות הטובות ביותר
 
     res.status(200).json({ success: true, data: upgrades });
   } catch (error) {

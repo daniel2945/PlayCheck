@@ -71,17 +71,21 @@ export default function ResultsDashboard({
     return spec;
   };
 
-  const fetchAiRecommendations = async (compId) => {
+const fetchAiRecommendations = async (compId) => {
     setIsAiLoading(true);
     setEditingPart(compId);
     setAiRecommendations(null);
 
     try {
-      const baseScore = data.specsDetails[compId].recScore || data.specsDetails[compId].minScore || 1000; 
-      // 2% מרחב ביטחון, כדי שהציון יעמוד סביב 100-105 בצורה אופטימלית
-      const targetScore = Math.ceil(baseScore * 1.02); 
+      // שליפת הציון המומלץ של המשחק מתוך הנתונים
+      const recScore = data.specsDetails[compId].recScore || data.specsDetails[compId].minScore || 1000; 
       
-      const res = await API_CALL(`/api/hardware/upgrades/${compId}?targetScore=${targetScore}`);
+      // שליפת הציון הנוכחי של חומרת המשתמש
+      // (שים לב להערה למטה לגבי הוספת שדה זה בשרת)
+      const userScore = data.specsDetails[compId].userScore || 0; 
+      
+      // קריאה ל-API עם הפרמטרים החדשים
+      const res = await API_CALL(`/api/hardware/upgrades/${compId}?userScore=${userScore}&recommendedScore=${recScore}`);
       
       if (res.success) {
         setAiRecommendations(res.data);
