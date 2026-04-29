@@ -71,20 +71,15 @@ export default function ResultsDashboard({
     return spec;
   };
 
-const fetchAiRecommendations = async (compId) => {
+  const fetchAiRecommendations = async (compId) => {
     setIsAiLoading(true);
     setEditingPart(compId);
     setAiRecommendations(null);
 
     try {
-      // שליפת הציון המומלץ של המשחק מתוך הנתונים
       const recScore = data.specsDetails[compId].recScore || data.specsDetails[compId].minScore || 1000; 
-      
-      // שליפת הציון הנוכחי של חומרת המשתמש
-      // (שים לב להערה למטה לגבי הוספת שדה זה בשרת)
       const userScore = data.specsDetails[compId].userScore || 0; 
       
-      // קריאה ל-API עם הפרמטרים החדשים
       const res = await API_CALL(`/api/hardware/upgrades/${compId}?userScore=${userScore}&recommendedScore=${recScore}`);
       
       if (res.success) {
@@ -174,11 +169,19 @@ const fetchAiRecommendations = async (compId) => {
           </div>
         ) : (
           <div className="flex items-start sm:items-center gap-4 bg-white/[0.02] border border-white/5 rounded-xl p-5 mb-8 transition-all hover:bg-white/[0.04]">
-            <span className="text-2xl drop-shadow-md hidden sm:block">💡</span>
-            <p className="text-[#9aa0a6] text-sm leading-relaxed flex-1">
-              <span className="text-[#e8eaed] font-bold text-base block mb-1">Curious about upgrading?</span>
-              Click the <strong className="text-white bg-black/40 px-1.5 py-0.5 rounded border border-white/10 mx-1">⚙️ icon</strong> on any component below to test a manual hardware swap, or hit the <strong className="text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30 mx-1">✨ Auto Upgrade</strong> button to let us instantly find the best matching parts for you!
-            </p>
+            <span className="text-2xl drop-shadow-md hidden sm:block mt-1">💡</span>
+            <div className="flex-1 flex flex-col gap-2">
+              <div>
+                <span className="text-[#e8eaed] font-bold text-base block mb-1">Curious about upgrading?</span>
+                <p className="text-[#9aa0a6] text-sm leading-relaxed">
+                  Click the <strong className="text-white bg-black/40 px-1.5 py-0.5 rounded border border-white/10 mx-1">⚙️ icon</strong> on any component below to test a manual hardware swap, or hit the <strong className="text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30 mx-1">✨ Auto Upgrade</strong> button to let us instantly find the best matching parts for you!
+                </p>
+              </div>
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400/90 text-xs px-3 py-1.5 rounded-lg w-fit mt-1">
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span><strong>Note:</strong> Suggestions are based on raw performance. Please verify hardware compatibility (e.g., motherboard socket, power supply) before purchasing.</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -292,10 +295,6 @@ const fetchAiRecommendations = async (compId) => {
                             <div className="text-xs text-[#9aa0a6] text-center py-2">No suitable upgrades found in DB.</div>
                           )}
                         </div>
-
-                        <p className="text-[9px] text-[#9aa0a6] text-center mt-1 leading-tight px-1">
-                          * AI suggestions aim for optimal performance. Actual results may vary.
-                        </p>
 
                         <div className="flex justify-between items-center mt-2">
                           <button onClick={() => setAiRecommendations(null)} className="text-[10px] text-[#9aa0a6] hover:text-white underline transition-colors">Manual Search</button>
