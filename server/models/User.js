@@ -40,7 +40,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// ✨ התיקון: הפונקציה כבר לא מקבלת next, ובמקום return next() יש רק return ✨
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
     return; // יוצאים מהפונקציה בהצלחה
