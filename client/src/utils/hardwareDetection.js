@@ -1,7 +1,6 @@
 export const detectHardware = () => {
   let rawGpuString = null;
   // navigator.deviceMemory returns the RAM in GB.
-  // Default to 8GB if the API is unsupported (like on Safari) or capped for privacy.
   let reportedRam = navigator.deviceMemory || 8;
 
   try {
