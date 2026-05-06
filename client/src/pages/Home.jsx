@@ -26,7 +26,7 @@ export default function Home() {
             </span>
           </div>
           <h1 className="text-5xl sm:text-7xl text-white mb-6 font-extrabold tracking-tight drop-shadow-2xl">
-            Can Your PC Run It?
+            Can Your PC Run It UP?
           </h1>
           <p className="text-xl sm:text-2xl text-[#9aa0a6] mb-12 max-w-3xl font-medium drop-shadow-md leading-relaxed">
             Stop guessing and start playing. Compare your hardware against the
