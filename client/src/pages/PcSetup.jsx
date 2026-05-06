@@ -13,23 +13,25 @@ export default function PcSetup() {
   const [ram, setRam] = useState(16);
   const [saveMessage, setSaveMessage] = useState("");
 
+  const API_URL = window.location.hostname === "localhost" 
+    ? "http://localhost:3000" 
+    : "https://playcheck.onrender.com";
+
   const [detectAlert, setDetectAlert] = useState(null);
 
   // New UI states for Deep Scan Desktop feature
   const [isScanning, setIsScanning] = useState(false);
   const [deepScanToken, setDeepScanToken] = useState("");
 
-  useEffect(() => {
+useEffect(() => {
     let interval;
     if (isScanning && deepScanToken) {
       interval = setInterval(async () => {
         try {
-          const res = await fetch(
-            `http://localhost:3000/api/hardware/sync-status/${deepScanToken}`,
-          );
-          const json = await res.json();
+          // שימוש ב-API_CALL במקום fetch רגיל
+          const response = await API_CALL(`/api/hardware/sync-status/${deepScanToken}`);
 
-          if (json.success && json.status === "completed") {
+          if (response.success && response.status === "completed") {
             clearInterval(interval);
             setIsScanning(false);
 
@@ -37,12 +39,13 @@ export default function PcSetup() {
               cpu: matchedCpu,
               gpu: matchedGpu,
               ram: matchedRam,
-            } = json.data;
+            } = response.data;
 
             // 1. Call the setter functions to bind the validated objects to the inputs
             if (matchedCpu) setCpu(matchedCpu);
             if (matchedGpu) setGpu(matchedGpu);
             if (matchedRam) setRam(matchedRam);
+            
             console.log("Deep Scan Sync Applied to UI:", {
               matchedCpu,
               matchedGpu,
@@ -75,7 +78,9 @@ export default function PcSetup() {
   };
 
   const downloadDeepScanScript = () => {
-    const batContent = `@echo off\necho PlayCheck Deep Scan Started...\necho Please wait while we analyze your hardware.\npowershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'SilentlyContinue'; $token='${deepScanToken}'; $cpu=(Get-CimInstance Win32_Processor | Select-Object -First 1).Name; $gpus=Get-CimInstance Win32_VideoController; $gpu=$gpus | Where-Object { $_.Name -notmatch 'Intel|HD Graphics|UHD|Basic Render' } | Select-Object -First 1; if (!$gpu) { $gpu = $gpus | Select-Object -First 1 }; $ram=[math]::round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB); $body = @{syncToken=$token; cpu=$cpu; gpu=$gpu.Name; ram=$ram} | ConvertTo-Json; try { Invoke-RestMethod -Uri 'http://localhost:3000/api/hardware/sync-submit' -Method Post -Body $body -ContentType 'application/json'; Write-Host 'Success! You can close this window and return to your browser.' -ForegroundColor Green } catch { Write-Host 'Failed to connect to the server.' -ForegroundColor Red }"\npause`;
+    // 2. שים לב לשורה של ה-Uri, החלפתי את localhost ב- ${API_URL}
+    const batContent = `@echo off\necho PlayCheck Deep Scan Started...\necho Please wait while we analyze your hardware.\npowershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'SilentlyContinue'; $token='${deepScanToken}'; $cpu=(Get-CimInstance Win32_Processor | Select-Object -First 1).Name; $gpus=Get-CimInstance Win32_VideoController; $gpu=$gpus | Where-Object { $_.Name -notmatch 'Intel|HD Graphics|UHD|Basic Render' } | Select-Object -First 1; if (!$gpu) { $gpu = $gpus | Select-Object -First 1 }; $ram=[math]::round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB); $body = @{syncToken=$token; cpu=$cpu; gpu=$gpu.Name; ram=$ram} | ConvertTo-Json; try { Invoke-RestMethod -Uri '${API_URL}/api/hardware/sync-submit' -Method Post -Body $body -ContentType 'application/json'; Write-Host 'Success! You can close this window and return to your browser.' -ForegroundColor Green } catch { Write-Host 'Failed to connect to the server.' -ForegroundColor Red }"\npause`;
+    
     const blob = new Blob([batContent], { type: "application/bat" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
