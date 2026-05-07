@@ -4,11 +4,10 @@ import HardwareInput from "../components/HardwareInput";
 
 export default function Compare() {
   const { user } = useAuthStore();
-  const [type, setType] = useState("GPU"); // מתחילים מהשוואת כרטיסי מסך
+  const [type, setType] = useState("GPU"); 
   const [currentHardware, setCurrentHardware] = useState(null);
   const [targetHardware, setTargetHardware] = useState(null);
 
-  // משיכת החומרה הנוכחית של המשתמש (או מהפרופיל או ממצב אורח)
   useEffect(() => {
     let pc = null;
     if (user?.myPc && typeof user.myPc.cpuId === "object") {
@@ -25,11 +24,9 @@ export default function Compare() {
     } else {
       setCurrentHardware(null);
     }
-    // איפוס חומרת היעד כשמחליפים בין CPU ל-GPU
     setTargetHardware(null);
   }, [type, user]);
 
-  // פונקציית עזר לשמות
   const formatName = (hw) => {
     if (!hw) return "";
     const brand = hw.brand || "";
@@ -39,7 +36,6 @@ export default function Compare() {
       : `${brand} ${model}`;
   };
 
-  // לוגיקת חישוב ההשוואה
   let difference = 0;
   let isUpgrade = false;
   let isDowngrade = false;
@@ -55,7 +51,7 @@ export default function Compare() {
   }
 
   return (
-    <div className="relative w-full min-h-screen pb-16 overflow-x-hidden">
+    <div className="relative w-full min-h-screen pb-16">
       {/* רקע ועיצוב */}
       <div className="absolute top-0 left-0 w-full h-[55vh] bg-[#121212] z-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-b from-[#8ab4f8]/10 via-[#202124]/80 to-[#202124]"></div>
@@ -70,7 +66,7 @@ export default function Compare() {
           the one you want to buy to see the actual performance difference.
         </p>
 
-        {/* כפתורי מעבר בין CPU ל GPU - תוקן למובייל */}
+        {/* כפתורי מעבר בין CPU ל GPU */}
         <div className="flex w-full max-w-[320px] sm:max-w-md bg-[#303134] rounded-full p-1 border border-[#5f6368] mb-10 sm:mb-12 shadow-lg">
           <button
             onClick={() => setType("GPU")}
@@ -96,12 +92,14 @@ export default function Compare() {
 
         {/* גריד של שני הצדדים להשוואה */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full">
+          
           {/* חומרה נוכחית */}
-          <div className="bg-[#303134]/90 backdrop-blur-sm border border-[#5f6368] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col relative z-20">
+          <div className="bg-[#303134]/90 backdrop-blur-sm border border-[#5f6368] rounded-3xl p-5 sm:p-6 shadow-xl flex flex-col">
             <h3 className="text-lg sm:text-xl text-[#e8eaed] font-bold mb-4 sm:mb-6 text-center border-b border-[#5f6368] pb-3 sm:pb-4">
               Current {type}
             </h3>
-            <div className="flex-grow">
+            {/* הוספנו relative z-20 כדי שהתפריט יצוף מעל */}
+            <div className="flex-grow relative z-20">
               <HardwareInput
                 type={type}
                 placeholder={`Search your current ${type}...`}
@@ -110,7 +108,7 @@ export default function Compare() {
               />
             </div>
             {currentHardware && (
-              <div className="mt-6 sm:mt-8 text-center bg-[#202124] py-3 sm:py-4 rounded-xl border border-white/5">
+              <div className="mt-6 sm:mt-8 text-center bg-[#202124] py-3 sm:py-4 rounded-xl border border-white/5 relative z-10">
                 <span className="text-[#9aa0a6] text-xs sm:text-sm uppercase tracking-widest block mb-1">
                   Benchmark Score
                 </span>
@@ -121,14 +119,16 @@ export default function Compare() {
             )}
           </div>
 
-          {/* חומרת יעד - הוסר overflow-hidden והוסף z-20 */}
-          <div className="bg-[#303134]/90 backdrop-blur-sm border border-[#8ab4f8]/40 shadow-[0_0_20px_rgba(138,180,248,0.1)] rounded-3xl p-5 sm:p-6 flex flex-col relative z-20">
-            {/* הפס הכחול העליון עכשיו עם פינות מעוגלות כדי שלא יפרוץ */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-[#8ab4f8] rounded-t-3xl"></div>
-            <h3 className="text-lg sm:text-xl text-[#8ab4f8] font-bold mb-4 sm:mb-6 text-center border-b border-[#5f6368] pb-3 sm:pb-4">
+          {/* חומרת יעד */}
+          {/* הסרנו overflow-hidden מה-div הראשי כדי לא לחתוך את החיפוש */}
+          <div className="bg-[#303134]/90 backdrop-blur-sm border border-[#8ab4f8]/40 shadow-[0_0_20px_rgba(138,180,248,0.1)] rounded-3xl p-5 sm:p-6 flex flex-col relative">
+            {/* הוספנו rounded-t-3xl לפס הכחול כדי שיתאים לפינות בלי צורך ב-overflow-hidden */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-[#8ab4f8] rounded-t-3xl pointer-events-none"></div>
+            <h3 className="text-lg sm:text-xl text-[#8ab4f8] font-bold mb-4 sm:mb-6 text-center border-b border-[#5f6368] pb-3 sm:pb-4 relative z-10">
               Upgrade Target
             </h3>
-            <div className="flex-grow">
+            {/* הוספנו relative z-20 לחלק של החיפוש */}
+            <div className="flex-grow relative z-20">
               <HardwareInput
                 type={type}
                 placeholder={`Search the ${type} you want...`}
@@ -137,7 +137,7 @@ export default function Compare() {
               />
             </div>
             {targetHardware && (
-              <div className="mt-6 sm:mt-8 text-center bg-[#202124] py-3 sm:py-4 rounded-xl border border-white/5">
+              <div className="mt-6 sm:mt-8 text-center bg-[#202124] py-3 sm:py-4 rounded-xl border border-white/5 relative z-10">
                 <span className="text-[#9aa0a6] text-xs sm:text-sm uppercase tracking-widest block mb-1">
                   Benchmark Score
                 </span>
@@ -151,7 +151,7 @@ export default function Compare() {
 
         {/* אזור התוצאות! מופיע רק כששניהם נבחרו */}
         {currentHardware && targetHardware && (
-          <div className="w-full mt-8 sm:mt-12 bg-[#28292c] border border-[#5f6368] rounded-3xl p-6 sm:p-8 shadow-2xl animate-fade-in relative overflow-hidden text-center z-10">
+          <div className="w-full mt-8 sm:mt-12 bg-[#28292c] border border-[#5f6368] rounded-3xl p-6 sm:p-8 shadow-2xl animate-fade-in relative overflow-hidden text-center">
             {/* הילה צבעונית ברקע */}
             <div
               className="absolute top-0 right-0 w-64 h-64 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none opacity-20"
@@ -164,12 +164,11 @@ export default function Compare() {
               }}
             ></div>
 
-            <h3 className="text-xl sm:text-2xl text-[#e8eaed] font-medium mb-2">
+            <h3 className="text-xl sm:text-2xl text-[#e8eaed] font-medium mb-2 relative z-10">
               Performance Difference
             </h3>
 
-            {/* טקסט האחוזים */}
-            <div className="flex items-center justify-center my-4 sm:my-6 break-words">
+            <div className="flex items-center justify-center my-4 sm:my-6 break-words relative z-10">
               <span
                 className="text-5xl sm:text-8xl font-black drop-shadow-md tracking-tighter"
                 style={{
@@ -185,7 +184,7 @@ export default function Compare() {
               </span>
             </div>
 
-            <p className="text-base sm:text-xl text-[#9aa0a6] leading-relaxed">
+            <p className="text-base sm:text-xl text-[#9aa0a6] leading-relaxed relative z-10">
               The{" "}
               <span className="text-white font-bold">
                 {formatName(targetHardware)}
