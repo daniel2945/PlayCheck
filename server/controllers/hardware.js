@@ -1,4 +1,9 @@
 const Hardware = require("../models/Hardware");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const aiWeakerModel = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash-lite",
+});
 
 // ==========================================
 // Global Cache & Helpers for Deep Scan Sync
@@ -379,43 +384,116 @@ const getAllHardwares = async (req, res, next) => {
     next(error);
   }
 };
+
 const getUpgradeRecommendations = async (req, res, next) => {
   try {
     const { type } = req.params; // "CPU" or "GPU"
-    // מקבלים את הציון של המשתמש ואת הציון המומלץ של המשחק מהבקשה
-    const { userScore, recommendedScore } = req.query; 
+    const { userScore, recommendedScore, currentSpecs } = req.query;
 
     if (!type || !userScore || !recommendedScore) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Missing hardware type, user score, or recommended score" 
+      return res.status(400).json({
+        success: false,
+        message: "Missing hardware type, user score, or recommended score",
       });
     }
 
     const currentScore = Number(userScore);
     const recScore = Number(recommendedScore);
-
     let targetScoreThreshold = 0;
 
-    // לוגיקת בחירת הציון לשדרוג:
+    // 1. לוגיקת בחירת הציון לשדרוג
     if (currentScore < recScore) {
-      // המשתמש מתחת למומלץ: נביא את הקרוב ביותר מעל המומלץ + מרווח ביטחון (למשל 5%)
-      const safetyMargin = 1.05; 
+      const safetyMargin = 1.05;
       targetScoreThreshold = recScore * safetyMargin;
     } else {
-      // המשתמש מעל המומלץ: נביא את הבא אחריו ב-10% לפחות מעל הציון הנוכחי שלו
-      targetScoreThreshold = currentScore * 1.10;
+      targetScoreThreshold = currentScore * 1.1;
     }
 
-    // מחפשים רכיבים מאותו סוג, שהציון שלהם גדול או שווה לסף שחישבנו
+    // 2. שליפת הרכיבים הרלוונטיים מה-DB
+    // 2. שליפת יותר רכיבים מה-DB כדי לתת ל-AI מבחר לברור מתוכו
     const upgrades = await Hardware.find({
       type: type.toUpperCase(),
-      benchmarkScore: { $gte: targetScoreThreshold }
+      benchmarkScore: { $gte: targetScoreThreshold },
     })
-    .sort({ benchmarkScore: 1 }) // מיון מהנמוך לגבוה כדי להביא את הכי קרוב לסף
-    .limit(3); // מחזירים את 3 האופציות הטובות ביותר
+      .sort({ benchmarkScore: 1 })
+      .limit(10); // שונה מ-3 ל-10 כדי שיהיה ל-AI מגוון לבדוק
 
-    res.status(200).json({ success: true, data: upgrades });
+    // ממירים מודלים של מונגוס לאובייקטים רגילים
+    let finalUpgrades = upgrades.map((u) => u.toObject());
+
+    // 3. אינטגרציה עם Gemini AI לבדיקת תאימות
+    if (currentSpecs && finalUpgrades.length > 0) {
+      try {
+        const prompt = `
+        You are a strictly realistic PC hardware expert.
+        The user's current PC specifications are: ${currentSpecs}
+        We need to upgrade the ${type}.
+        Here are ${finalUpgrades.length} possible upgrade options from our database:
+        ${finalUpgrades.map((u, i) => `${i + 1}. ${u.brand} ${u.model}`).join("\n")}
+
+        CRITICAL REAL-WORLD RULES:
+        1. LAPTOPS CANNOT BE UPGRADED: If the user's current PC is a laptop (indicated by mobile CPUs ending in 'H', 'U', 'P', 'HX', or GPUs labeled 'Laptop'/'Mobile'), changing the CPU or GPU is physically IMPOSSIBLE. Compatibility MUST be 0%.
+        2. DESKTOPS (DEDUCE FROM CURRENT SPECS): DO NOT ask for missing motherboard info. Deduce compatibility based on the fact that the PC successfully runs the current hardware.
+           - If upgrading CPU: Does the new CPU fit the EXACT SAME socket as the CURRENT CPU? If yes, high compatibility. If no, 0% compatibility.
+           - If upgrading GPU: Assume a standard PCIe slot exists. Base your compatibility score ONLY on logical pairings (will the current CPU bottleneck the new GPU?).
+        
+        Analyze the compatibility of EACH option.
+        YOU MUST RETURN ONLY A RAW JSON ARRAY. NO CONVERSATIONAL TEXT. NO "I need more info".
+        Example format:
+        [
+          { "index": 1, "compatibility_percentage": 90, "reason": "short explanation in English" }
+        ]`;
+
+        console.log("Calling Gemini for compatibility check...");
+        const result = await aiWeakerModel.generateContent(prompt);
+        const rawResponse = result.response.text();
+
+        // ✨ חילוץ חכם: מחפשים רק את המערך (מ-[ ועד ]) ומתעלמים מכל טקסט חופשי שה-AI הוסיף
+        const jsonMatch = rawResponse.match(/\[[\s\S]*\]/);
+
+        if (!jsonMatch) {
+          throw new Error("AI response did not contain a valid JSON array.");
+        }
+
+        const parsedAIResults = JSON.parse(jsonMatch[0]);
+        console.log("Gemini Results:", parsedAIResults);
+
+        // 4. מיזוג התוצאות
+        finalUpgrades = finalUpgrades.map((upg, i) => {
+          const aiMatch = parsedAIResults.find((item) => item.index === i + 1);
+          return {
+            ...upg,
+            compatibility_percentage: aiMatch
+              ? aiMatch.compatibility_percentage
+              : null,
+            compatibility_reason: aiMatch ? aiMatch.reason : null,
+          };
+        });
+
+        // ✨ התיקון הקריטי: ממיינים לפי האחוז הכי גבוה, ורק אז חותכים ל-3 התוצאות הטובות ביותר!
+        finalUpgrades.sort(
+          (a, b) =>
+            (b.compatibility_percentage || 0) -
+            (a.compatibility_percentage || 0),
+        );
+        finalUpgrades = finalUpgrades.slice(0, 3);
+      } catch (aiError) {
+        console.error("Gemini Compatibility Check Failed:", aiError.message);
+        // במקום 0%, נחזיר null כדי שהבר לא ירונדר, ונשים הודעה ידידותית למשתמש
+        finalUpgrades = finalUpgrades.map((upg) => ({
+          ...upg,
+          compatibility_percentage: null,
+          compatibility_reason:
+            "⚠️ AI compatibility analysis is temporarily unavailable due to high server demand. Please check hardware compatibility manually.",
+        }));
+        finalUpgrades = finalUpgrades.slice(0, 3);
+      }
+    } else {
+      // אם אין AI (למשל לא נשלח currentSpecs), עדיין נחזיר רק 3
+      finalUpgrades = finalUpgrades.slice(0, 3);
+    }
+
+    res.status(200).json({ success: true, data: finalUpgrades });
   } catch (error) {
     console.error("Error fetching hardware upgrades:", error);
     next(error);
@@ -431,5 +509,5 @@ module.exports = {
   autoDetectHardware,
   syncSubmit,
   syncStatus,
-  getUpgradeRecommendations
+  getUpgradeRecommendations,
 };
