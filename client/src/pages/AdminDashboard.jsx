@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import API_CALL from "../api/API_CALL";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
+import SitemapDiagram from "../components/Admin/SitemapDiagram";
 
 export default function AdminDashboard() {
   const currentUser = useAuthStore((state) => state.user);
@@ -373,7 +374,7 @@ export default function AdminDashboard() {
 
       {/* תפריט הטאבים */}
       <div className="flex gap-2 sm:gap-4 mb-6 sm:mb-8 border-b border-[#303134] pb-4 overflow-x-auto w-full scrollbar-thin">
-        {["users", "games", "hardware"].map((tab) => (
+        {["users", "games", "hardware", "sitemap"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -384,13 +385,26 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {error && (
+      {error && !loading && activeTab !== "sitemap" && (
         <div className="bg-[#EA4335] text-white p-4 rounded-lg mb-6">
           {error}
         </div>
       )}
-      {loading && (
+      {loading && activeTab !== "sitemap" && (
         <div className="text-[#9aa0a6] mb-6">Loading {activeTab} data...</div>
+      )}
+
+      {/* ==============================================
+          טאב סימולציית מפת אתר
+      ============================================== */}
+      {activeTab === "sitemap" && (
+        <div className="w-full">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-[#e8eaed] mb-2">Interactive Sitemap</h2>
+            <p className="text-[#9aa0a6]">Visualize and manage your application structure. This is a visual representation for planning and documentation.</p>
+          </div>
+          <SitemapDiagram />
+        </div>
       )}
 
       {/* ==============================================

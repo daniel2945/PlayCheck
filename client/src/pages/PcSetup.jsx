@@ -23,6 +23,8 @@ export default function PcSetup() {
     let interval;
     if (isScanning && deepScanToken) {
       interval = setInterval(async () => {
+        console.log("hello");
+
         try {
           const res = await fetch(
             `http://localhost:3000/api/hardware/sync-status/${deepScanToken}`,
