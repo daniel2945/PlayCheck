@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
   MiniMap,
@@ -8,7 +8,10 @@ import {
   useEdgesState,
   addEdge,
   Panel,
+  getNodesBounds,
+  getViewportForBounds,
 } from '@xyflow/react';
+import { toPng } from 'html-to-image';
 import '@xyflow/react/dist/style.css';
 
 const initialNodes = [
@@ -42,9 +45,17 @@ const initialEdges = [
 
 const STORAGE_KEY = 'playcheck-sitemap-state';
 
+function downloadImage(dataUrl) {
+  const a = document.createElement('a');
+  a.setAttribute('download', 'playcheck-sitemap.png');
+  a.setAttribute('href', dataUrl);
+  a.click();
+}
+
 export default function SitemapDiagram() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const mapRef = useRef(null);
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -94,8 +105,36 @@ export default function SitemapDiagram() {
     }
   };
 
+  const onDownload = () => {
+    if (!mapRef.current) return;
+    
+    const nodesBounds = getNodesBounds(nodes);
+    const viewport = getViewportForBounds(nodesBounds, 1024, 768, 0.5, 2);
+
+    const viewportElement = mapRef.current.querySelector('.react-flow__viewport');
+    
+    toPng(viewportElement, {
+      backgroundColor: '#202124',
+      width: 1024,
+      height: 768,
+      pixelRatio: 3,
+      style: {
+        width: '1024px',
+        height: '768px',
+        transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        backgroundColor: '#202124',
+        textRendering: 'geometricPrecision',
+      },
+      cacheBust: true,
+    })
+    .then(downloadImage)
+    .catch((err) => {
+      console.error('Export failed', err);
+    });
+  };
+
   return (
-    <div className="w-full h-[600px] bg-[#202124] rounded-xl border border-[#5f6368] overflow-hidden">
+    <div ref={mapRef} className="w-full h-[600px] bg-[#202124] rounded-xl border border-[#5f6368] overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -110,6 +149,15 @@ export default function SitemapDiagram() {
         <MiniMap zoomable pannable />
         <Background variant="dots" gap={12} size={1} />
         <Panel position="top-right" className="flex gap-2">
+          <button
+            onClick={onDownload}
+            className="bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download PNG
+          </button>
           <button
             onClick={addNode}
             className="bg-[#34A853] hover:bg-[#2d9047] text-[#202124] px-4 py-2 rounded-lg font-bold transition-colors"
