@@ -3,6 +3,7 @@ import API_CALL from "../api/API_CALL";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
 import SitemapDiagram from "../components/Admin/SitemapDiagram";
+import SchemaDiagram from "../components/Admin/SchemaDiagram";
 
 export default function AdminDashboard() {
   const currentUser = useAuthStore((state) => state.user);
@@ -374,7 +375,7 @@ export default function AdminDashboard() {
 
       {/* תפריט הטאבים */}
       <div className="flex gap-2 sm:gap-4 mb-6 sm:mb-8 border-b border-[#303134] pb-4 overflow-x-auto w-full scrollbar-thin">
-        {["users", "games", "hardware", "sitemap"].map((tab) => (
+        {["users", "games", "hardware", "architecture"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -385,25 +386,41 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {error && !loading && activeTab !== "sitemap" && (
+      {error && !loading && activeTab !== "architecture" && (
         <div className="bg-[#EA4335] text-white p-4 rounded-lg mb-6">
           {error}
         </div>
       )}
-      {loading && activeTab !== "sitemap" && (
+      {loading && activeTab !== "architecture" && (
         <div className="text-[#9aa0a6] mb-6">Loading {activeTab} data...</div>
       )}
 
       {/* ==============================================
-          טאב סימולציית מפת אתר
+          טאב ארכיטקטורה (Sitemap & Schema)
       ============================================== */}
-      {activeTab === "sitemap" && (
-        <div className="w-full">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-[#e8eaed] mb-2">Interactive Sitemap</h2>
-            <p className="text-[#9aa0a6]">Visualize and manage your application structure. This is a visual representation for planning and documentation.</p>
+      {activeTab === "architecture" && (
+        <div className="w-full flex flex-col gap-12">
+          {/* Sitemap Section */}
+          <div className="w-full">
+            <div className="mb-6 flex justify-between items-end">
+              <div>
+                <h2 className="text-xl font-bold text-[#e8eaed] mb-2">Application Sitemap</h2>
+                <p className="text-[#9aa0a6]">Visualize and manage your page structure and navigation flow.</p>
+              </div>
+            </div>
+            <SitemapDiagram />
           </div>
-          <SitemapDiagram />
+
+          <hr className="border-[#3c4043]" />
+
+          {/* Schema Section */}
+          <div className="w-full">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-[#e8eaed] mb-2">Database Architecture</h2>
+              <p className="text-[#9aa0a6]">Detailed view of MongoDB collections, field types, and entity relationships.</p>
+            </div>
+            <SchemaDiagram />
+          </div>
         </div>
       )}
 
