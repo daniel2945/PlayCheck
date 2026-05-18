@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import API_CALL from "../../api/API_CALL";
 import HardwareInput from "../HardwareInput";
+import useAuthStore from "../../store/useAuthStore";
 
 export default function ResultsDashboard({
   data,
@@ -12,19 +14,17 @@ export default function ResultsDashboard({
   setIsSimulating,
   resetSimulation,
 }) {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [mounted, setMounted] = useState(false);
   const [editingPart, setEditingPart] = useState(null);
-  const [hardwareList, setHardwareList] = useState({ cpus: [], gpus: [] });
   const [testSpecs, setTestSpecs] = useState({
     cpuId: "",
     gpuId: "",
     ramGb: 16,
   });
-  const [isHardwareLoading, setIsHardwareLoading] = useState(false);
 
-  const [aiRecommendations, setAiRecommendations] = useState(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-
+  // האפקט שקולט נתונים מהסימולטור ההולוגרפי ומטפל באנימציה
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(timer);
@@ -32,7 +32,6 @@ export default function ResultsDashboard({
 
   if (!data) return null;
 
-  // פונקציית עזר לקביעת צבעים - עודכנה לפי ההיגיון החדש
   const getColorTheme = (score) => {
     if (score < 50)
       return { color: "rose", hex: "#f43f5e", label: "Below Min" };
@@ -101,77 +100,38 @@ export default function ResultsDashboard({
     return spec;
   };
 
-  const fetchAiRecommendations = async (compId) => {
-    setIsAiLoading(true);
-    setEditingPart(compId);
-    setAiRecommendations(null);
-    try {
-      const recScore =
-        data.specsDetails[compId].recScore ||
-        data.specsDetails[compId].minScore ||
-        1000;
-      const userScore = data.specsDetails[compId].userScore || 0;
-
-      // איסוף מפרט המחשב הקיים לשליחה ל-AI
-      const currentCpu = data.specsDetails?.cpu?.user || "Unknown CPU";
-      const currentGpu = data.specsDetails?.gpu?.user || "Unknown GPU";
-      const currentRam = data.specsDetails?.ram?.user || "Unknown RAM";
-      const currentSpecs = `CPU: ${currentCpu}, GPU: ${currentGpu}, RAM: ${currentRam}`;
-
-      // הוספנו את currentSpecs לתוך ה-URL
-      const res = await API_CALL(
-        `/api/hardware/upgrades/${compId}?userScore=${userScore}&recommendedScore=${recScore}&currentSpecs=${encodeURIComponent(currentSpecs)}`,
-      );
-
-      if (res.success) setAiRecommendations(res.data);
-    } catch (err) {
-      console.error("Failed to get AI recommendations:", err);
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
   const openEditMode = async (partId) => {
     setEditingPart(partId);
-    setAiRecommendations(null);
-    if (hardwareList.cpus.length === 0) {
-      setIsHardwareLoading(true);
-      try {
-        const res = await API_CALL("/api/hardware");
-        if (res.success) {
-          const cpus = res.data.filter((h) => h.type === "CPU");
-          const gpus = res.data.filter((h) => h.type === "GPU");
-          setHardwareList({ cpus, gpus });
-          const currentCpuStr = cleanHardwareName(
-            data?.specsDetails?.cpu?.user,
-          );
-          const currentGpuStr = cleanHardwareName(
-            data?.specsDetails?.gpu?.user,
-          );
-          const currentRamStr = data?.specsDetails?.ram?.user;
-          const matchedCpu =
-            cpus.find(
-              (c) =>
-                cleanHardwareName(`${c.brand} ${c.model}`) === currentCpuStr,
-            ) || cpus[0];
-          const matchedGpu =
-            gpus.find(
-              (g) =>
-                cleanHardwareName(`${g.brand} ${g.model}`) === currentGpuStr,
-            ) || gpus[0];
-          const matchedRam = currentRamStr ? parseInt(currentRamStr) : 16;
-          setTestSpecs((prev) => ({
-            cpuId: prev.cpuId || matchedCpu?._id || "",
-            gpuId: prev.gpuId || matchedGpu?._id || "",
-            ramGb: prev.ramGb || matchedRam,
-          }));
-        }
-      } catch (err) {
-        console.error("Failed to load hardware list", err);
-      } finally {
-        setIsHardwareLoading(false);
+
+    let myOriginalPc = null;
+    if (user?.myPc && user.myPc.cpuId) {
+      myOriginalPc = {
+        cpuId:
+          typeof user.myPc.cpuId === "object"
+            ? user.myPc.cpuId._id
+            : user.myPc.cpuId,
+        gpuId:
+          typeof user.myPc.gpuId === "object"
+            ? user.myPc.gpuId._id
+            : user.myPc.gpuId,
+        ramGb: user.myPc.ramGb,
+      };
+    } else {
+      const guestSpecs = JSON.parse(localStorage.getItem("guestSpecs"));
+      if (guestSpecs) {
+        myOriginalPc = {
+          cpuId: guestSpecs.cpu?._id,
+          gpuId: guestSpecs.gpu?._id,
+          ramGb: guestSpecs.ram,
+        };
       }
     }
+
+    setTestSpecs((prev) => ({
+      cpuId: prev.cpuId || myOriginalPc?.cpuId || "",
+      gpuId: prev.gpuId || myOriginalPc?.gpuId || "",
+      ramGb: prev.ramGb || myOriginalPc?.ramGb || 16,
+    }));
   };
 
   const handleTestSubmit = async () => {
@@ -386,22 +346,18 @@ export default function ResultsDashboard({
                       className="bg-rose-500 opacity-60"
                       style={{ width: "33.3%" }}
                     ></div>{" "}
-                    {/* 0-50 */}
                     <div
                       className="bg-orange-500 opacity-60"
                       style={{ width: "20%" }}
                     ></div>{" "}
-                    {/* 50-80 */}
                     <div
                       className="bg-cyan-400 opacity-60"
                       style={{ width: "13.3%" }}
                     ></div>{" "}
-                    {/* 80-100 */}
                     <div
                       className="bg-emerald-500 opacity-60"
                       style={{ width: "33.4%" }}
                     ></div>{" "}
-                    {/* 100-150 */}
                   </div>
                   <div
                     className="absolute top-[-5px] bottom-[-5px] w-[2px] bg-white shadow-[0_0_8px_white] z-10 transition-all duration-1000 ease-out"
@@ -420,160 +376,67 @@ export default function ResultsDashboard({
                   <div className="flex flex-col gap-3 mt-auto bg-black/60 p-4 rounded-xl border border-cyan-500/50 min-h-[140px]">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-cyan-400 font-bold uppercase tracking-wider text-[11px]">
-                        {aiRecommendations
-                          ? "Select Upgrade"
-                          : `Test different ${comp.title}`}
+                        Test different {comp.title}
                       </span>
-                      {comp.id !== "ram" &&
-                        !aiRecommendations &&
-                        !isAiLoading && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              fetchAiRecommendations(comp.id);
-                            }}
-                            className="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-[10px] uppercase font-bold hover:bg-emerald-500/20 transition-colors shadow-sm"
-                          >
-                            ✨ Auto Upgrade
-                          </button>
-                        )}
+                      {comp.id !== "ram" && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigate("/upgrade-simulator", {
+                              state: { data, gameId },
+                            });
+                          }}
+                          className="flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded text-[10px] uppercase font-bold hover:bg-emerald-500/20 transition-colors shadow-sm"
+                        >
+                          ✨ Auto Upgrade
+                        </button>
+                      )}
                     </div>
 
-                    {isAiLoading ? (
-                      <div className="flex flex-col items-center justify-center flex-1 text-emerald-400 py-4">
-                        <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin mb-2"></div>
-                        <span className="text-[10px] uppercase">
-                          Finding upgrades...
-                        </span>
+                    <>
+                      {comp.id === "ram" ? (
+                        <input
+                          type="number"
+                          value={testSpecs.ramGb}
+                          onChange={(e) =>
+                            setTestSpecs({
+                              ...testSpecs,
+                              ramGb: e.target.value,
+                            })
+                          }
+                          className="w-full p-2.5 rounded bg-[#09090b] text-white border border-white/20 outline-none focus:border-cyan-400 transition-colors"
+                        />
+                      ) : (
+                        <HardwareInput
+                          type={comp.title}
+                          onSelect={(item) =>
+                            setTestSpecs({
+                              ...testSpecs,
+                              [`${comp.id}Id`]: item?._id,
+                            })
+                          }
+                        />
+                      )}
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button
+                          onClick={() => setEditingPart(null)}
+                          className="text-[#9aa0a6] hover:text-[#e8eaed] px-3 py-1.5 rounded transition-colors text-sm"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleTestSubmit}
+                          disabled={
+                            comp.id === "ram"
+                              ? !testSpecs.ramGb
+                              : !testSpecs[`${comp.id}Id`]
+                          }
+                          className="bg-cyan-500 text-black font-bold px-4 py-1.5 rounded hover:bg-cyan-400 transition-colors shadow disabled:opacity-50 text-sm"
+                        >
+                          Simulate
+                        </button>
                       </div>
-) : aiRecommendations ? (
-                      <div className="flex flex-col gap-2">
-                        {aiRecommendations.length > 0 ? (
-                          aiRecommendations.map((rec) => (
-                            <div
-                              key={rec._id}
-                              onClick={() =>
-                                setTestSpecs({
-                                  ...testSpecs,
-                                  [`${comp.id}Id`]: rec._id,
-                                })
-                              }
-                              className={`p-3 rounded-lg border cursor-pointer flex flex-col gap-2 transition-all ${testSpecs[`${comp.id}Id`] === rec._id ? "bg-emerald-500/20 border-emerald-400" : "bg-[#09090b] border-white/10 hover:border-emerald-500/50"}`}
-                            >
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-white truncate max-w-[70%]">
-                                  {cleanHardwareName(`${rec.brand} ${rec.model}`)}
-                                </span>
-                                <span className="text-[10px] text-emerald-400 font-black bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm">
-                                  {rec.benchmarkScore} Pts
-                                </span>
-                              </div>
-
-                              {/* תצוגת נתוני ה-AI: אחוזי תאימות והסבר */}
-                             {/* תצוגת נתוני ה-AI: אחוזי תאימות והסבר */}
-                              {(typeof rec.compatibility_percentage === "number" || rec.compatibility_reason) && (
-                                <div className="flex flex-col gap-1 mt-1 border-t border-white/5 pt-2">
-                                  
-                                  {/* מציג את הבר רק אם יש אחוזים תקינים (לא שגיאה) */}
-                                  {typeof rec.compatibility_percentage === "number" && (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[9px] text-[#9aa0a6] uppercase tracking-wider">
-                                        Compatibility:
-                                      </span>
-                                      <div className="flex-1 h-1.5 bg-black rounded-full overflow-hidden">
-                                        <div
-                                          className={`h-full ${rec.compatibility_percentage >= 80 ? "bg-emerald-500" : rec.compatibility_percentage >= 50 ? "bg-amber-500" : "bg-rose-500"}`}
-                                          style={{
-                                            width: `${rec.compatibility_percentage}%`,
-                                          }}
-                                        ></div>
-                                      </div>
-                                      <span
-                                        className={`text-[10px] font-bold ${rec.compatibility_percentage >= 80 ? "text-emerald-400" : rec.compatibility_percentage >= 50 ? "text-amber-400" : "text-rose-400"}`}
-                                      >
-                                        {rec.compatibility_percentage}%
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {/* הטקסט - אם הייתה שגיאת AI, הוא יופיע בכתום בולט. אחרת יופיע רגיל */}
-                                  <span className={`text-[10px] leading-relaxed pb-1 ${typeof rec.compatibility_percentage === "number" ? "text-[#9aa0a6]" : "text-amber-500 font-medium"}`}>
-                                    {rec.compatibility_reason}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          // כאן נכנסת ההודעה המיוחדת למקרה שאין שדרוגים!
-                          <div className="flex flex-col items-center justify-center p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl mb-1 text-center">
-                            <span className="text-2xl mb-1">🔥</span>
-                            <span className="text-emerald-400 font-bold text-sm">Top-Tier Hardware!</span>
-                            <span className="text-[#9aa0a6] text-xs mt-1">Your {comp.title} is extremely powerful. No upgrades available in our database.</span>
-                          </div>
-                        )}
-
-                        <div className="flex justify-between items-center mt-2">
-                          <button
-                            onClick={() => setAiRecommendations(null)}
-                            className="text-[10px] text-[#9aa0a6] hover:text-white underline transition-colors"
-                          >
-                            Manual Search
-                          </button>
-                          <button
-                            onClick={handleTestSubmit}
-                            className="bg-cyan-500 text-black font-bold px-4 py-1.5 rounded hover:bg-cyan-400 mt-1 text-sm shadow"
-                          >
-                            Simulate
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        {comp.id === "ram" ? (
-                          <input
-                            type="number"
-                            value={testSpecs.ramGb}
-                            onChange={(e) =>
-                              setTestSpecs({
-                                ...testSpecs,
-                                ramGb: e.target.value,
-                              })
-                            }
-                            className="w-full p-2.5 rounded bg-[#09090b] text-white border border-white/20 outline-none focus:border-cyan-400 transition-colors"
-                          />
-                        ) : (
-                          <HardwareInput
-                            type={comp.title}
-                            onSelect={(item) =>
-                              setTestSpecs({
-                                ...testSpecs,
-                                [`${comp.id}Id`]: item?._id,
-                              })
-                            }
-                          />
-                        )}
-                        <div className="flex justify-end gap-2 mt-2">
-                          <button
-                            onClick={() => setEditingPart(null)}
-                            className="text-[#9aa0a6] hover:text-[#e8eaed] px-3 py-1.5 rounded transition-colors text-sm"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleTestSubmit}
-                            disabled={
-                              comp.id === "ram"
-                                ? !testSpecs.ramGb
-                                : !testSpecs[`${comp.id}Id`]
-                            }
-                            className="bg-cyan-500 text-black font-bold px-4 py-1.5 rounded hover:bg-cyan-400 transition-colors shadow disabled:opacity-50 text-sm"
-                          >
-                            Simulate
-                          </button>
-                        </div>
-                      </>
-                    )}
+                    </>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3 mt-auto bg-black/20 p-4 rounded-xl border border-white/5 shadow-inner">
@@ -619,13 +482,11 @@ export default function ResultsDashboard({
           const theme = getColorTheme(overall);
           const radius = 70;
           const circumference = 2 * Math.PI * radius;
-          
-          // העיגול עצמו יכול להתמלא עד 100% (מעגל שלם)
+
           const strokeDashoffset =
             circumference -
             ((mounted ? Math.min(overall, 100) : 0) / 100) * circumference;
 
-          // הטקסט יציג את הציון האמיתי, עד מקסימום של 200
           const displayScore = Math.min(overall, 200);
 
           return (
