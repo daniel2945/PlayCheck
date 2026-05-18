@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import API_CALL from "../api/API_CALL";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
+import ReportedReviewsAdmin from "../components/ReportedReviewsAdmin";
 
 export default function AdminDashboard() {
   const currentUser = useAuthStore((state) => state.user);
@@ -93,7 +94,9 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchData();
+    if (activeTab !== "reports") {
+      fetchData();
+    }
   }, [activeTab]);
 
   // ==========================================
@@ -373,13 +376,13 @@ export default function AdminDashboard() {
 
       {/* תפריט הטאבים */}
       <div className="flex gap-2 sm:gap-4 mb-6 sm:mb-8 border-b border-[#303134] pb-4 overflow-x-auto w-full scrollbar-thin">
-        {["users", "games", "hardware"].map((tab) => (
+        {["users", "games", "hardware", "reports"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-6 py-2 rounded-lg font-medium capitalize whitespace-nowrap ${activeTab === tab ? "bg-[#8ab4f8] text-[#202124]" : "bg-[#303134] text-[#9aa0a6] hover:text-[#e8eaed]"}`}
           >
-            Manage {tab}
+            {tab === "reports" ? "Reported Reviews" : `Manage ${tab}`}
           </button>
         ))}
       </div>
@@ -390,7 +393,9 @@ export default function AdminDashboard() {
         </div>
       )}
       {loading && (
-        <div className="text-[#9aa0a6] mb-6">Loading {activeTab} data...</div>
+        <div className="text-[#9aa0a6] mb-6 animate-pulse">
+          Loading {activeTab} data...
+        </div>
       )}
 
       {/* ==============================================
@@ -849,6 +854,13 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ==============================================
+          טאב דיווחים
+      ============================================== */}
+      {activeTab === "reports" && (
+        <ReportedReviewsAdmin />
       )}
 
       {/* ==============================================

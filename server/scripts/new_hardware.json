@@ -358,5 +358,89 @@
     "brand": "Intel",
     "model": "Intel UHD Graphics (13th Gen)",
     "benchmarkScore": 1500
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Arc A770",
+    "benchmarkScore": 10500
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Arc A750",
+    "benchmarkScore": 9200
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Arc A580",
+    "benchmarkScore": 7500
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Arc A380",
+    "benchmarkScore": 4200
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Arc Graphics (8-Cores)",
+    "benchmarkScore": 4000
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Arc 130V Graphics",
+    "benchmarkScore": 3800
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Arc Graphics (7-Cores)",
+    "benchmarkScore": 3400
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Iris Xe Graphics G7 (96 EUs)",
+    "benchmarkScore": 2800
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel Iris Xe Graphics G7 (80 EUs)",
+    "benchmarkScore": 2400
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel UHD Graphics 770",
+    "benchmarkScore": 1800
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel UHD Graphics 730",
+    "benchmarkScore": 1400
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel UHD Graphics (12th Gen)",
+    "benchmarkScore": 1200
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel UHD Graphics 630",
+    "benchmarkScore": 900
+  },
+  {
+    "type": "GPU",
+    "brand": "Intel",
+    "model": "Intel HD Graphics 620",
+    "benchmarkScore": 600
   }
 ]

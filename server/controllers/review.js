@@ -19,12 +19,10 @@ const createReview = async (req, res, next) => {
 
     const existingReview = await Review.findOne({ gameId, userId });
     if (existingReview) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "You have already reviewed this game.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "You have already reviewed this game.",
+      });
     }
 
     const hardwareSnapshot = {
@@ -44,13 +42,11 @@ const createReview = async (req, res, next) => {
     });
     await newReview.save();
 
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Review added successfully",
-        data: newReview,
-      });
+    res.status(201).json({
+      success: true,
+      message: "Review added successfully",
+      data: newReview,
+    });
   } catch (err) {
     next(err);
   }
@@ -60,6 +56,13 @@ const getGameReviews = async (req, res, next) => {
   try {
     const gameId = Number(req.params.id);
     const userId = req.user ? req.user.id : null; // ייתכן שהמשתמש אורח
+
+    // הגנה מפני קריסות: מוודא שה-ID שהתקבל הוא אכן מספר
+    if (isNaN(gameId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid game ID format" });
+    }
 
     let reviews = await Review.find({ gameId: gameId })
       .populate("userId", "userName")
@@ -72,13 +75,11 @@ const getGameReviews = async (req, res, next) => {
         reviewerName: r.userId?.userName || "Unknown",
         matchLevel: null,
       }));
-      return res
-        .status(200)
-        .json({
-          success: true,
-          count: basicReviews.length,
-          data: basicReviews,
-        });
+      return res.status(200).json({
+        success: true,
+        count: basicReviews.length,
+        data: basicReviews,
+      });
     }
 
     const currentUser = await User.findById(userId)
@@ -97,13 +98,11 @@ const getGameReviews = async (req, res, next) => {
         reviewerName: r.userId?.userName || "Unknown",
         matchLevel: null,
       }));
-      return res
-        .status(200)
-        .json({
-          success: true,
-          count: basicReviews.length,
-          data: basicReviews,
-        });
+      return res.status(200).json({
+        success: true,
+        count: basicReviews.length,
+        data: basicReviews,
+      });
     }
 
     const myCpuScore = currentUser.myPc.cpuId.benchmarkScore;
@@ -132,13 +131,11 @@ const getGameReviews = async (req, res, next) => {
     processedReviews.sort(
       (a, b) => parseFloat(a.diffPercent) - parseFloat(b.diffPercent),
     );
-    res
-      .status(200)
-      .json({
-        success: true,
-        count: processedReviews.length,
-        data: processedReviews,
-      });
+    res.status(200).json({
+      success: true,
+      count: processedReviews.length,
+      data: processedReviews,
+    });
   } catch (err) {
     next(err);
   }
@@ -161,25 +158,21 @@ const updateReview = async (req, res, next) => {
       req.user.role !== "admin" &&
       req.user.role !== "owner"
     ) {
-      return res
-        .status(403)
-        .json({
-          success: false,
-          message: "Not authorized to edit this review",
-        });
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to edit this review",
+      });
     }
 
     if (text) review.text = text;
     if (rating) review.rating = rating;
 
     await review.save();
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Review updated successfully",
-        data: review,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Review updated successfully",
+      data: review,
+    });
   } catch (err) {
     next(err);
   }
@@ -198,4 +191,92 @@ const deleteReview = async (req, res, next) => {
   }
 };
 
-module.exports = { createReview, getGameReviews, updateReview, deleteReview };
+// פונקציית דיווח על ביקורת
+const reportReview = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const { reason } = req.body;
+    const userId = req.user.id;
+
+    const review = await Review.findById(reviewId);
+    if (!review)
+      return res
+        .status(404)
+        .json({ success: false, message: "Review not found" });
+
+    if (!review.reports) review.reports = [];
+
+    const alreadyReported = review.reports.find(
+      (r) => r.userId && r.userId.toString() === userId.toString(),
+    );
+    if (alreadyReported) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already reported this review",
+      });
+    }
+
+    review.reports.push({ userId, reason, createdAt: new Date() });
+    await review.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Review reported successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// פונקציה למנהלים - שליפת כל הביקורות שדווחו
+const getReportedReviews = async (req, res, next) => {
+  try {
+    // שולף רק ביקורות שיש להן לפחות דיווח אחד
+    const reportedReviews = await Review.find({
+      "reports.0": { $exists: true },
+    })
+      .populate("userId", "userName")
+      .populate("reports.userId", "userName");
+
+    res.status(200).json({
+      success: true,
+      count: reportedReviews.length,
+      data: reportedReviews,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// פונקציה למנהלים - ביטול כל הדיווחים על ביקורת
+const dismissReports = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Review not found" });
+    }
+
+    // איפוס מערך הדיווחים
+    review.reports = [];
+    await review.save();
+
+    res
+      .status(200)
+      .json({ success: true, message: "Reports dismissed successfully." });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  createReview,
+  getGameReviews,
+  updateReview,
+  deleteReview,
+  reportReview,
+  getReportedReviews,
+  dismissReports,
+};
