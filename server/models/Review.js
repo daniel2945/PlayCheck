@@ -34,11 +34,18 @@ const reviewSchema = new mongoose.Schema(
       gpuScore: { type: Number, required: true },
       ramGb: { type: Number, required: true },
       // שומרים גם את השמות כדי שנוכל להציג: "נכתב על ידי משתמש עם Intel Core i5"
-      cpuName: { type: String, required: true }, 
+      cpuName: { type: String, required: true },
       gpuName: { type: String, required: true },
-    }
+    },
+    reports: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        reason: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
-  { timestamps: true } // מוסיף אוטומטית createdAt ו-updatedAt
+  { timestamps: true }, // מוסיף אוטומטית createdAt ו-updatedAt
 );
 
 module.exports = mongoose.model("Review", reviewSchema);
