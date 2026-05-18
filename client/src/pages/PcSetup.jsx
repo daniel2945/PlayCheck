@@ -27,6 +27,8 @@ useEffect(() => {
     let interval;
     if (isScanning && deepScanToken) {
       interval = setInterval(async () => {
+        console.log("hello");
+
         try {
           // שימוש ב-API_CALL במקום fetch רגיל
           const response = await API_CALL(`/api/hardware/sync-status/${deepScanToken}`);

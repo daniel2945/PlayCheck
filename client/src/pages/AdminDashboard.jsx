@@ -3,6 +3,8 @@ import API_CALL from "../api/API_CALL";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
 import ReportedReviewsAdmin from "../components/ReportedReviewsAdmin";
+import SitemapDiagram from "../components/Admin/SitemapDiagram";
+import SchemaDiagram from "../components/Admin/SchemaDiagram";
 
 export default function AdminDashboard() {
   const currentUser = useAuthStore((state) => state.user);
@@ -62,7 +64,7 @@ export default function AdminDashboard() {
   const [gameForm, setGameForm] = useState(defaultGameForm);
 
   // טופס משתמשים 
-  const [originalUser, setOriginalUser] = useState(null); // שומר את המצב המקורי כדי לעדכן רק מה שהשתנה
+  const [originalUser, setOriginalUser] = useState(null);
   const [userForm, setUserForm] = useState({
     _id: "",
     userName: "",
@@ -94,7 +96,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (activeTab !== "reports") {
+    if (activeTab !== "reports" && activeTab !== "architecture") {
       fetchData();
     }
   }, [activeTab]);
@@ -158,30 +160,25 @@ export default function AdminDashboard() {
     try {
       let updatedData = { ...originalUser };
 
-      // 1. עדכון שם משתמש (רק אם שונה)
       if (userForm.userName !== originalUser.userName) {
         await API_CALL(`/api/admin/${userForm._id}/name`, "PUT", { userName: userForm.userName });
         updatedData.userName = userForm.userName;
       }
 
-      // 2. עדכון אימייל (רק אם שונה - מנהל ובעלים יכולים לעשות את זה)
       if (userForm.email !== originalUser.email) {
         await API_CALL(`/api/admin/${userForm._id}/email`, "PUT", { email: userForm.email });
         updatedData.email = userForm.email;
       }
 
-      // 3. עדכון סיסמה (רק אם הוזנה חדשה)
       if (userForm.newPassword && userForm.newPassword.trim() !== "") {
         await API_CALL(`/api/admin/${userForm._id}/password`, "PUT", { password: userForm.newPassword });
       }
 
-      // 4. עדכון תפקיד (רק בעלים יכול)
       if (isOwner && userForm.role !== originalUser.role) {
         await API_CALL(`/api/admin/${userForm._id}/role`, "PUT", { role: userForm.role });
         updatedData.role = userForm.role;
       }
 
-      // עדכון הסטייט המקומי כך שלא נצטרך לרענן את העמוד
       setUsers(users.map((u) => (u._id === userForm._id ? updatedData : u)));
       
       setIsUserModalOpen(false);
@@ -376,7 +373,7 @@ export default function AdminDashboard() {
 
       {/* תפריט הטאבים */}
       <div className="flex gap-2 sm:gap-4 mb-6 sm:mb-8 border-b border-[#303134] pb-4 overflow-x-auto w-full scrollbar-thin">
-        {["users", "games", "hardware", "reports"].map((tab) => (
+        {["users", "games", "hardware", "architecture", "reports"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -387,14 +384,44 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {error && (
+      {error && !loading && activeTab !== "architecture" && (
         <div className="bg-[#EA4335] text-white p-4 rounded-lg mb-6">
           {error}
         </div>
       )}
-      {loading && (
+      
+      {loading && activeTab !== "architecture" && activeTab !== "reports" && (
         <div className="text-[#9aa0a6] mb-6 animate-pulse">
           Loading {activeTab} data...
+        </div>
+      )}
+
+      {/* ==============================================
+          טאב ארכיטקטורה (Sitemap & Schema)
+      ============================================== */}
+      {activeTab === "architecture" && (
+        <div className="w-full flex flex-col gap-12">
+          {/* Sitemap Section */}
+          <div className="w-full">
+            <div className="mb-6 flex justify-between items-end">
+              <div>
+                <h2 className="text-xl font-bold text-[#e8eaed] mb-2">Application Sitemap</h2>
+                <p className="text-[#9aa0a6]">Visualize and manage your page structure and navigation flow.</p>
+              </div>
+            </div>
+            <SitemapDiagram />
+          </div>
+
+          <hr className="border-[#3c4043]" />
+
+          {/* Schema Section */}
+          <div className="w-full">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-[#e8eaed] mb-2">Database Architecture</h2>
+              <p className="text-[#9aa0a6]">Detailed view of MongoDB collections, field types, and entity relationships.</p>
+            </div>
+            <SchemaDiagram />
+          </div>
         </div>
       )}
 
