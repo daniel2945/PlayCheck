@@ -18,7 +18,9 @@ import GameDetails from "./pages/GameDetails";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy"; // למעלה בייבואים
 import Settings from "./pages/Settings";
-import UpgradeSimulator from "./pages/UpgradeSimulator"
+import UpgradeSimulator from "./pages/UpgradeSimulator";
+import Social from "./pages/Social";
+import ThreadDetails from "./pages/ThreadDetails";
 import "./index.css";
 import { Toaster } from "react-hot-toast";
 
@@ -81,6 +83,9 @@ function App() {
             <Route path="game/:gameId" element={<Result />} />
 
             <Route path="/upgrade-simulator" element={<UpgradeSimulator />} />
+            {/* אזור חברתי - פיד ופורום */}
+            <Route path="social" element={<Social />} />
+            <Route path="social/thread/:id" element={<ThreadDetails />} />
 
             {/* דף פרופיל אישי - מוגן: אם אין טוקן, נשלח ללוגין */}
             <Route
