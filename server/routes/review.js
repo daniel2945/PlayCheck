@@ -10,6 +10,9 @@ const {
   getGameReviews,
   updateReview,
   deleteReview,
+  reportReview,
+  getReportedReviews,
+  dismissReports,
 } = require("../controllers/review");
 
 // מידלוור חכם: קורא את הטוקן אם קיים, אבל לא זורק שגיאה אם המשתמש אורח
@@ -26,6 +29,16 @@ const optionalAuth = (req, res, next) => {
 };
 
 // --- הגדרת הראוטים ---
+
+// ראוטים ספציפיים חייבים לבוא לפני ראוטים עם פרמטרים (כמו /:id) כדי למנוע התנגשויות
+reviewRouter.get("/reported", verifyToken, forAdmins, getReportedReviews);
+reviewRouter.post("/:reviewId/report", verifyToken, reportReview);
+reviewRouter.delete(
+  "/:reviewId/reports",
+  verifyToken,
+  forAdmins,
+  dismissReports,
+);
 
 // 1. שליפת ביקורות (פתוח לכולם, סינון חומרה יעבוד רק למי שמחובר)
 reviewRouter.get("/:id", optionalAuth, getGameReviews);

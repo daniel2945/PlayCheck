@@ -163,6 +163,62 @@ export default function GameReviews({ gameId }) {
     );
   };
 
+  const handleReportReview = (reviewId) => {
+    let reason = "";
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-3 min-w-[250px]">
+          <p className="font-medium text-[#e8eaed]">Report this review</p>
+          <textarea
+            className="w-full bg-[#1a1b1e] text-[#e8eaed] border border-white/10 rounded-lg p-2 text-sm focus:outline-none focus:border-[#FBBC05] resize-none h-20"
+            placeholder="Reason for reporting..."
+            onChange={(e) => {
+              reason = e.target.value;
+            }}
+          />
+          <div className="flex gap-2 justify-end mt-2">
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-sm text-[#9aa0a6] hover:bg-[#3c4043] rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={async () => {
+                if (!reason.trim()) {
+                  toast.error("Please enter a reason.");
+                  return;
+                }
+                toast.dismiss(t.id);
+                try {
+                  const res = await API_CALL(
+                    `/api/review/${reviewId}/report`,
+                    "POST",
+                    { reason },
+                  );
+                  if (res.success) {
+                    toast.success(
+                      "Review reported successfully. Admins will check it.",
+                    );
+                  } else {
+                    toast.error(res.message || "Failed to report review.");
+                  }
+                } catch (err) {
+                  console.error("Report review error:", err);
+                  toast.error(err.message || "Error reporting review.");
+                }
+              }}
+              className="px-3 py-1.5 text-sm bg-[#FBBC05] text-[#202124] font-bold rounded hover:bg-[#f2a900] transition-colors"
+            >
+              Submit Report
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: Infinity },
+    );
+  };
+
   const getBadgeStyle = (matchLevel) => {
     switch (matchLevel) {
       case "Exact Match":
@@ -383,6 +439,28 @@ export default function GameReviews({ gameId }) {
                             <path
                               fillRule="evenodd"
                               d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+                      )}
+
+                      {/* כפתור דיווח - יוצג לכל משתמש מחובר שהוא לא הכותב */}
+                      {user._id !== review.userId?._id && (
+                        <button
+                          onClick={() => handleReportReview(review._id)}
+                          className="text-[#5f6368] hover:text-[#FBBC05] transition-colors bg-[#202124] p-2 rounded-full border border-transparent hover:border-[#FBBC05]/30"
+                          title="Report Review"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
                               clipRule="evenodd"
                             />
                           </svg>

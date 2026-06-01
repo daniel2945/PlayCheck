@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import API_CALL from "../api/API_CALL";
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
+import ReportedReviewsAdmin from "../components/ReportedReviewsAdmin";
 import SitemapDiagram from "../components/Admin/SitemapDiagram";
 import SchemaDiagram from "../components/Admin/SchemaDiagram";
 
@@ -63,7 +64,7 @@ export default function AdminDashboard() {
   const [gameForm, setGameForm] = useState(defaultGameForm);
 
   // טופס משתמשים 
-  const [originalUser, setOriginalUser] = useState(null); // שומר את המצב המקורי כדי לעדכן רק מה שהשתנה
+  const [originalUser, setOriginalUser] = useState(null);
   const [userForm, setUserForm] = useState({
     _id: "",
     userName: "",
@@ -95,7 +96,9 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchData();
+    if (activeTab !== "reports" && activeTab !== "architecture") {
+      fetchData();
+    }
   }, [activeTab]);
 
   // ==========================================
@@ -157,30 +160,25 @@ export default function AdminDashboard() {
     try {
       let updatedData = { ...originalUser };
 
-      // 1. עדכון שם משתמש (רק אם שונה)
       if (userForm.userName !== originalUser.userName) {
         await API_CALL(`/api/admin/${userForm._id}/name`, "PUT", { userName: userForm.userName });
         updatedData.userName = userForm.userName;
       }
 
-      // 2. עדכון אימייל (רק אם שונה - מנהל ובעלים יכולים לעשות את זה)
       if (userForm.email !== originalUser.email) {
         await API_CALL(`/api/admin/${userForm._id}/email`, "PUT", { email: userForm.email });
         updatedData.email = userForm.email;
       }
 
-      // 3. עדכון סיסמה (רק אם הוזנה חדשה)
       if (userForm.newPassword && userForm.newPassword.trim() !== "") {
         await API_CALL(`/api/admin/${userForm._id}/password`, "PUT", { password: userForm.newPassword });
       }
 
-      // 4. עדכון תפקיד (רק בעלים יכול)
       if (isOwner && userForm.role !== originalUser.role) {
         await API_CALL(`/api/admin/${userForm._id}/role`, "PUT", { role: userForm.role });
         updatedData.role = userForm.role;
       }
 
-      // עדכון הסטייט המקומי כך שלא נצטרך לרענן את העמוד
       setUsers(users.map((u) => (u._id === userForm._id ? updatedData : u)));
       
       setIsUserModalOpen(false);
@@ -375,13 +373,13 @@ export default function AdminDashboard() {
 
       {/* תפריט הטאבים */}
       <div className="flex gap-2 sm:gap-4 mb-6 sm:mb-8 border-b border-[#303134] pb-4 overflow-x-auto w-full scrollbar-thin">
-        {["users", "games", "hardware", "architecture"].map((tab) => (
+        {["users", "games", "hardware", "architecture", "reports"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-6 py-2 rounded-lg font-medium capitalize whitespace-nowrap ${activeTab === tab ? "bg-[#8ab4f8] text-[#202124]" : "bg-[#303134] text-[#9aa0a6] hover:text-[#e8eaed]"}`}
           >
-            Manage {tab}
+            {tab === "reports" ? "Reported Reviews" : `Manage ${tab}`}
           </button>
         ))}
       </div>
@@ -391,8 +389,11 @@ export default function AdminDashboard() {
           {error}
         </div>
       )}
-      {loading && activeTab !== "architecture" && (
-        <div className="text-[#9aa0a6] mb-6">Loading {activeTab} data...</div>
+      
+      {loading && activeTab !== "architecture" && activeTab !== "reports" && (
+        <div className="text-[#9aa0a6] mb-6 animate-pulse">
+          Loading {activeTab} data...
+        </div>
       )}
 
       {/* ==============================================
@@ -880,6 +881,13 @@ export default function AdminDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ==============================================
+          טאב דיווחים
+      ============================================== */}
+      {activeTab === "reports" && (
+        <ReportedReviewsAdmin />
       )}
 
       {/* ==============================================
