@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import API_CALL from "../api/API_CALL";
 import GameCard from "../components/GameCard";
+import useGameStore from "../store/useGameStore";
 
 // פונקציית הקסם להמרת ג'יבריש לעברית-אנגלית
 const fixHebrewToEnglish = (text) => {
@@ -31,20 +32,41 @@ const GENRES = [
 export default function GamesCatalog() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const observer = useRef();
+
+  const {
+    games,
+    page,
+    hasNextPage,
+    filters,
+    loading,
+    error,
+    setGames,
+    appendGames,
+    setPage,
+    setHasNextPage,
+    setFilters,
+    setLoading,
+    setError,
+  } = useGameStore();
 
   const qFromUrl = searchParams.get("q") || "";
   const yearFromUrl = searchParams.get("year") || "";
   const genreFromUrl = searchParams.get("genre") || "";
 
-  const [searchQuery, setSearchQuery] = useState(qFromUrl);
-  const [selectedYear, setSelectedYear] = useState(yearFromUrl);
-  const [selectedGenre, setSelectedGenre] = useState(genreFromUrl);
-
-  const [games, setGames] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const lastGameElementRef = useCallback(
+    (node) => {
+      if (loading) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasNextPage) {
+          setPage(page + 1);
+        }
+      });
+      if (node) observer.current.observe(node);
+    },
+    [loading, hasNextPage, page, setPage],
+  );
 
   const fetchGames = async (
     pageNum = 1,
@@ -54,35 +76,30 @@ export default function GamesCatalog() {
     isLoadMore = false,
   ) => {
     setLoading(true);
-    setError("");
+    setError(null);
     try {
       const params = new URLSearchParams({
         page: pageNum,
+        pageSize: 16,
       });
 
       if (queryToUse && queryToUse.trim() !== "") {
-        // ✨ כאן אנחנו מתרגמים את המילה רגע לפני השליחה לשרת ✨
         const fixedQuery = fixHebrewToEnglish(queryToUse);
         params.append("q", fixedQuery);
       }
-      if (yearToUse) {
-        params.append("year", yearToUse);
-      }
-      if (genreToUse) {
-        params.append("genre", genreToUse);
-      }
+      if (yearToUse) params.append("year", yearToUse);
+      if (genreToUse) params.append("genre", genreToUse);
 
       const endpoint = `/api/game/search?${params.toString()}`;
       const data = await API_CALL(endpoint);
 
       if (data.success && Array.isArray(data.data)) {
         if (isLoadMore) {
-          setGames((prev) => [...prev, ...data.data]);
+          appendGames(data.data);
         } else {
           setGames(data.data);
         }
         setHasNextPage(data.hasNextPage);
-        setPage(pageNum);
       } else {
         if (!isLoadMore) setGames([]);
         setHasNextPage(false);
@@ -94,24 +111,36 @@ export default function GamesCatalog() {
     }
   };
 
+  // Sync filters from URL and fetch initial if needed
   useEffect(() => {
-    setSearchQuery(qFromUrl);
-    setSelectedYear(yearFromUrl);
-    setSelectedGenre(genreFromUrl);
-    fetchGames(1, qFromUrl, yearFromUrl, genreFromUrl, false);
+    const filtersChanged = 
+      filters.q !== qFromUrl || 
+      filters.year !== yearFromUrl || 
+      filters.genre !== genreFromUrl;
+
+    if (filtersChanged) {
+      setFilters({ q: qFromUrl, year: yearFromUrl, genre: genreFromUrl });
+      fetchGames(1, qFromUrl, yearFromUrl, genreFromUrl, false);
+    } else if (games.length === 0) {
+      // Fetch if store is empty but filters match (e.g. initial navigation)
+      fetchGames(1, qFromUrl, yearFromUrl, genreFromUrl, false);
+    }
   }, [qFromUrl, yearFromUrl, genreFromUrl]);
+
+  // Fetch more when page increases
+  useEffect(() => {
+    if (page > 1) {
+      fetchGames(page, filters.q, filters.year, filters.genre, true);
+    }
+  }, [page]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const params = {};
-    if (searchQuery) params.q = searchQuery;
-    if (selectedYear) params.year = selectedYear;
-    if (selectedGenre) params.genre = selectedGenre;
+    if (filters.q) params.q = filters.q;
+    if (filters.year) params.year = filters.year;
+    if (filters.genre) params.genre = filters.genre;
     setSearchParams(params);
-  };
-
-  const handleLoadMore = () => {
-    fetchGames(page + 1, qFromUrl, yearFromUrl, genreFromUrl, true);
   };
 
   const handleGameClick = (game) => {
@@ -120,6 +149,7 @@ export default function GamesCatalog() {
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 37 }, (_, i) => currentYear - i);
+
   return (
     <div className="relative w-full min-h-screen">
       {/* אזור הרקע עם התמונה והטשטוש */}
@@ -143,14 +173,14 @@ export default function GamesCatalog() {
           <input
             type="text"
             placeholder="Search for a game..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={filters.q}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             className="flex-1 w-full p-3 sm:p-4 rounded-full bg-[#303134]/90 backdrop-blur-sm text-[#e8eaed] border border-[#5f6368] focus:outline-none focus:border-[#8ab4f8] text-base sm:text-lg"
           />
 
           <select
-            value={selectedGenre}
-            onChange={(e) => setSelectedGenre(e.target.value)}
+            value={filters.genre}
+            onChange={(e) => setFilters({ ...filters, genre: e.target.value })}
             className="w-full md:w-auto p-3 sm:p-4 rounded-full bg-[#303134]/90 backdrop-blur-sm text-[#e8eaed] border border-[#5f6368] cursor-pointer outline-none text-base sm:text-lg"
           >
             <option value="">All Genres</option>
@@ -162,8 +192,8 @@ export default function GamesCatalog() {
           </select>
 
           <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
+            value={filters.year}
+            onChange={(e) => setFilters({ ...filters, year: e.target.value })}
             className="w-full md:w-auto p-3 sm:p-4 rounded-full bg-[#303134]/90 backdrop-blur-sm text-[#e8eaed] border border-[#5f6368] cursor-pointer outline-none text-base sm:text-lg"
           >
             <option value="">All Years</option>
@@ -183,14 +213,17 @@ export default function GamesCatalog() {
         </form>
 
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-12">
-          {games.map((game) => {
+          {games.map((game, index) => {
             const releasedYear = game.releasedDate
               ? game.releasedDate.substring(0, 4)
               : "TBA";
 
+            const isLastElement = games.length === index + 1;
+
             return (
               <div
                 key={`game-card-${game.rawgId || game._id}`}
+                ref={isLastElement ? lastGameElementRef : null}
                 onClick={() => handleGameClick(game)}
                 className="cursor-pointer transition-transform hover:scale-105 h-full"
               >
@@ -203,15 +236,6 @@ export default function GamesCatalog() {
             );
           })}
         </div>
-
-        {hasNextPage && !loading && games.length > 0 && (
-          <button
-            onClick={handleLoadMore}
-            className="mb-12 px-10 py-3 border border-[#8ab4f8] text-[#8ab4f8] hover:bg-[#8ab4f8] hover:text-[#202124] rounded-full font-bold transition-all"
-          >
-            Show More Results
-          </button>
-        )}
 
         {loading && (
           <p className="text-[#9aa0a6] mb-12 text-lg animate-pulse">
