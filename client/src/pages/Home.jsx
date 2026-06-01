@@ -1,10 +1,31 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore"; // ייבוא ה-Store
 import TrendingCarousel from "../components/TrendingCarousel";
+import useGameStore from "../store/useGameStore";
+import API_CALL from "../api/API_CALL";
 
 export default function Home() {
   // שליפת המשתמש מה-Store
   const user = useAuthStore((state) => state.user);
+  const { games, setGames, setHasNextPage } = useGameStore();
+
+  useEffect(() => {
+    const prefetchGames = async () => {
+      if (games.length === 0) {
+        try {
+          const data = await API_CALL("/api/game/search?page=1&pageSize=16");
+          if (data.success && Array.isArray(data.data)) {
+            setGames(data.data);
+            setHasNextPage(data.hasNextPage);
+          }
+        } catch (err) {
+          console.error("Prefetch failed:", err);
+        }
+      }
+    };
+    prefetchGames();
+  }, [games.length, setGames, setHasNextPage]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#121212]">

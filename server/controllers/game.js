@@ -79,16 +79,16 @@ const formatRam = (ramGb) => {
 const searchGames = async (req, res, next) => {
   try {
     // ✨ הוספנו פה את genre לשליפה ✨
-    const { q, year, page, sort, genre } = req.query;
+    const { q, year, page, sort, genre, pageSize } = req.query;
 
     console.log(
-      `[SEARCH DEBUG] Query: ${q}, Year: ${year}, Genre: ${genre}, Page: ${page}`,
+      `[SEARCH DEBUG] Query: ${q}, Year: ${year}, Genre: ${genre}, Page: ${page}, PageSize: ${pageSize}`,
     );
 
     const params = {
       key: apiKey, // ודא שהמשתנה הזה מוגדר אצלך בקובץ כמו קודם
       page: page || 1,
-      page_size: 12,
+      page_size: pageSize || 16,
     };
 
     // אם חיפשנו מילה - נותנים ל-RAWG לחפש התאמה מדויקת (בלי למיין)
