@@ -1,5 +1,6 @@
 const Review = require("../models/Review");
 const User = require("../models/User");
+const Notification = require("../models/Notification");
 
 const createReview = async (req, res, next) => {
   try {
@@ -183,6 +184,7 @@ const deleteReview = async (req, res, next) => {
   try {
     const { reviewId } = req.params;
     await Review.findByIdAndDelete(reviewId);
+    await Notification.deleteMany({ entityId: reviewId });
     res
       .status(200)
       .json({ success: true, message: "Review deleted successfully" });
@@ -218,6 +220,14 @@ const reportReview = async (req, res, next) => {
 
     review.reports.push({ userId, reason, createdAt: new Date() });
     await review.save();
+
+    await Notification.create({
+      isAdminNotification: true,
+      sender: userId,
+      type: "review_report",
+      entityId: review._id,
+      message: `reported a review for: ${reason}`,
+    });
 
     res
       .status(200)
@@ -262,6 +272,10 @@ const dismissReports = async (req, res, next) => {
     // איפוס מערך הדיווחים
     review.reports = [];
     await review.save();
+    await Notification.deleteMany({
+      entityId: review._id,
+      type: "review_report",
+    });
 
     res
       .status(200)

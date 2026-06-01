@@ -308,7 +308,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ✨ התוספת החדשה: Hardware Simulator ✨ */}
               <div className="flex gap-5 items-start">
                 <div className="flex-shrink-0 w-14 h-14 bg-[#202124] border border-white/10 rounded-full flex items-center justify-center text-[#FBBC05] shadow-lg">
                   <svg 
@@ -340,6 +339,40 @@ export default function Home() {
                   </p>
                 </div>
               </div>
+
+              {/* ✨ התוספת החדשה: Community Hub ✨ */}
+              <div className="flex gap-5 items-start">
+                <div className="flex-shrink-0 w-14 h-14 bg-[#202124] border border-white/10 rounded-full flex items-center justify-center text-[#c58af9] shadow-lg">
+                  <svg 
+                    className="w-6 h-6" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth="2" 
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" 
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold text-[#e8eaed] mb-2">
+                    Community Hub
+                  </h4>
+                  <p className="text-[#9aa0a6] leading-relaxed text-lg mb-2">
+                    Join the conversation in our social feed and forums. Share your gaming setup, ask questions, and connect with other players.
+                  </p>
+                  <Link to="/social" className="text-[#c58af9] hover:text-[#d8a8fa] font-semibold flex items-center gap-1 transition-colors">
+                    Explore Community 
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </Link>
+                </div>
+              </div>
+
             </div>
           </div>
 

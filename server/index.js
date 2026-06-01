@@ -9,6 +9,8 @@ const hardwareRouter = require("./routes/hardware");
 const userRouter = require("./routes/user");
 const gameRouter = require("./routes/game");
 const reviewRouter = require("./routes/review");
+const socialRouter = require("./routes/social.js");
+const notificationRouter = require("./routes/notification.js");
 const { initializeHardwareCache } = require("./controllers/game");
 
 const app = express();
@@ -21,6 +23,8 @@ app.use("/api/hardware", hardwareRouter);
 app.use("/api/user", userRouter);
 app.use("/api/game", gameRouter);
 app.use("/api/review", reviewRouter);
+app.use("/api/social", socialRouter);
+app.use("/api/notifications", notificationRouter);
 
 app.use(errorHandler);
 
