@@ -136,6 +136,60 @@ export default function GameDetails() {
             )}
           </div>
 
+          {/* דרישות מערכת של המשחק */}
+          {game.requirements && (
+            <div className="mt-12 pt-8 border-t border-[#5f6368]/30">
+              <h2 className="text-2xl text-[#8ab4f8] font-bold mb-6">
+                System Requirements
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* מינימום */}
+                <div className="bg-[#28292c] p-6 rounded-2xl border border-white/5 shadow-md">
+                  <h3 className="text-lg font-bold text-[#f28b82] mb-4 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#f28b82] shadow-[0_0_8px_rgba(242,139,130,0.6)]"></span> 
+                    Minimum
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="block text-[#9aa0a6] text-xs font-bold uppercase tracking-wider mb-1">Processor (CPU)</span>
+                      <span className="text-[#e8eaed] text-sm">{game.requirements.minimum?.cpuText || "Not specified by developer"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[#9aa0a6] text-xs font-bold uppercase tracking-wider mb-1">Graphics (GPU)</span>
+                      <span className="text-[#e8eaed] text-sm">{game.requirements.minimum?.gpuText || "Not specified by developer"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[#9aa0a6] text-xs font-bold uppercase tracking-wider mb-1">Memory (RAM)</span>
+                      <span className="text-[#e8eaed] text-sm">{game.requirements.minimum?.ramGb ? `${game.requirements.minimum.ramGb} GB` : "Not specified by developer"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* מומלץ */}
+                <div className="bg-[#28292c] p-6 rounded-2xl border border-white/5 shadow-md">
+                  <h3 className="text-lg font-bold text-[#81c995] mb-4 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#81c995] shadow-[0_0_8px_rgba(129,201,149,0.6)]"></span> 
+                    Recommended
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="block text-[#9aa0a6] text-xs font-bold uppercase tracking-wider mb-1">Processor (CPU)</span>
+                      <span className="text-[#e8eaed] text-sm">{game.requirements.recommended?.cpuText || "Not specified by developer"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[#9aa0a6] text-xs font-bold uppercase tracking-wider mb-1">Graphics (GPU)</span>
+                      <span className="text-[#e8eaed] text-sm">{game.requirements.recommended?.gpuText || "Not specified by developer"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[#9aa0a6] text-xs font-bold uppercase tracking-wider mb-1">Memory (RAM)</span>
+                      <span className="text-[#e8eaed] text-sm">{game.requirements.recommended?.ramGb ? `${game.requirements.recommended.ramGb} GB` : "Not specified by developer"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div id="reviews-section" className="mt-16 pt-8 border-t border-[#5f6368]/30">
             <h2 className="text-2xl text-[#8ab4f8] font-bold mb-2">
               Hardware-Matched Reviews

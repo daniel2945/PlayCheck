@@ -2,19 +2,20 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, Outlet } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
 import API_CALL from "../api/API_CALL";
+import NotificationsDropdown from "./NotificationsDropdown";
 
 const fixHebrewToEnglish = (text) => {
   const heb = "/'קראטוןםפשדגכעיחלךף,זסבהנמצתץ.";
   const eng = "qwertyuiopasdfghjkl;'zxcvbnm,./";
-  
+
   let fixedText = "";
-  
+
   for (let char of text) {
     const index = heb.indexOf(char);
     // אם התו הוא אות בעברית, ניקח את המקביל שלו באנגלית. אם לא (רווח/מספר) נשאיר אותו
     fixedText += index > -1 ? eng[index] : char;
   }
-  
+
   return fixedText;
 };
 
@@ -58,15 +59,15 @@ export default function Layout() {
         setShowDropdown(false);
         return;
       }
-      
+
       setIsSearching(true);
       try {
         const fixedQuery = fixHebrewToEnglish(debouncedQuery);
 
         const data = await API_CALL(
-          `/api/game/search?q=${encodeURIComponent(fixedQuery)}`
+          `/api/game/search?q=${encodeURIComponent(fixedQuery)}`,
         );
-        
+
         if (data.success && data.data) {
           setSearchResults(data.data.slice(0, 5));
           setShowDropdown(true);
@@ -186,11 +187,26 @@ export default function Layout() {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <rect x="2" y="6" width="20" height="12" rx="4" ry="4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M6 12h4m-2-2v4m10-2h.01M14 12h.01" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <rect
+                  x="2"
+                  y="6"
+                  width="20"
+                  height="12"
+                  rx="4"
+                  ry="4"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M6 12h4m-2-2v4m10-2h.01M14 12h.01"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
-            
+
             {/* טקסט הלוגו החדש */}
             <span className="tracking-tight">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#8ab4f8] to-[#c58af9]">
@@ -200,33 +216,36 @@ export default function Layout() {
             </span>
           </Link>
 
-          <button
-            className="md:hidden text-[#94a3b8] hover:text-[#e8eaed] transition-colors focus:outline-none ml-auto"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <svg
-              className="w-7 h-7"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-2 md:hidden ml-auto">
+            {token && <NotificationsDropdown />}
+            <button
+              className="text-[#94a3b8] hover:text-[#e8eaed] transition-colors focus:outline-none"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                ></path>
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                ></path>
-              )}
-            </svg>
-          </button>
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                {isMobileMenuOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  ></path>
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  ></path>
+                )}
+              </svg>
+            </button>
+          </div>
 
           <div className="hidden md:flex gap-6 text-[#e8eaed] items-center font-medium text-base">
             <Link to="/" className="hover:text-[#8ab4f8] transition-colors">
@@ -237,6 +256,13 @@ export default function Layout() {
               className="hover:text-[#8ab4f8] transition-colors"
             >
               Games
+            </Link>
+            {/* הקישור החדש לעמוד הסושיאל בדסקטופ */}
+            <Link
+              to="/social"
+              className="hover:text-[#8ab4f8] transition-colors"
+            >
+              Community
             </Link>
             <Link
               to="/setup"
@@ -309,6 +335,7 @@ export default function Layout() {
               </Link>
             ) : (
               <div className="flex items-center gap-4 border-l border-[#334155] pl-6 ml-2">
+                <NotificationsDropdown />
                 <Link
                   to="/profile"
                   title="My Profile"
@@ -400,6 +427,14 @@ export default function Layout() {
               className="text-[#94a3b8] hover:text-[#8ab4f8] transition-colors font-medium"
             >
               Games
+            </Link>
+            {/* הקישור החדש לעמוד הסושיאל במובייל */}
+            <Link
+              to="/social"
+              onClick={closeMenu}
+              className="text-[#94a3b8] hover:text-[#8ab4f8] transition-colors font-medium"
+            >
+              Community
             </Link>
             <Link
               to="/setup"

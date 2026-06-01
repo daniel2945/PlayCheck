@@ -4,6 +4,7 @@ import API_CALL from "../api/API_CALL";
 // 1. ייבוא של Zustand - שנה את הנתיב לפי איך שקראת לקובץ שלך!
 import useAuthStore from "../store/useAuthStore";
 import toast from "react-hot-toast";
+import ReportButton from "./ReportButton";
 
 export default function GameReviews({ gameId }) {
   const navigate = useNavigate();
@@ -163,62 +164,6 @@ export default function GameReviews({ gameId }) {
     );
   };
 
-  const handleReportReview = (reviewId) => {
-    let reason = "";
-    toast(
-      (t) => (
-        <div className="flex flex-col gap-3 min-w-[250px]">
-          <p className="font-medium text-[#e8eaed]">Report this review</p>
-          <textarea
-            className="w-full bg-[#1a1b1e] text-[#e8eaed] border border-white/10 rounded-lg p-2 text-sm focus:outline-none focus:border-[#FBBC05] resize-none h-20"
-            placeholder="Reason for reporting..."
-            onChange={(e) => {
-              reason = e.target.value;
-            }}
-          />
-          <div className="flex gap-2 justify-end mt-2">
-            <button
-              onClick={() => toast.dismiss(t.id)}
-              className="px-3 py-1.5 text-sm text-[#9aa0a6] hover:bg-[#3c4043] rounded transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={async () => {
-                if (!reason.trim()) {
-                  toast.error("Please enter a reason.");
-                  return;
-                }
-                toast.dismiss(t.id);
-                try {
-                  const res = await API_CALL(
-                    `/api/review/${reviewId}/report`,
-                    "POST",
-                    { reason },
-                  );
-                  if (res.success) {
-                    toast.success(
-                      "Review reported successfully. Admins will check it.",
-                    );
-                  } else {
-                    toast.error(res.message || "Failed to report review.");
-                  }
-                } catch (err) {
-                  console.error("Report review error:", err);
-                  toast.error(err.message || "Error reporting review.");
-                }
-              }}
-              className="px-3 py-1.5 text-sm bg-[#FBBC05] text-[#202124] font-bold rounded hover:bg-[#f2a900] transition-colors"
-            >
-              Submit Report
-            </button>
-          </div>
-        </div>
-      ),
-      { duration: Infinity },
-    );
-  };
-
   const getBadgeStyle = (matchLevel) => {
     switch (matchLevel) {
       case "Exact Match":
@@ -348,11 +293,10 @@ export default function GameReviews({ gameId }) {
 
       {/* אזור 2: רשימת הביקורות (תוצג רק אם למשתמש יש חומרה!) */}
       {hasHardware && (
-        <div>
+        <>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[#e8eaed] text-xl font-bold">Player Reviews</h3>
           </div>
-
           {/* מקרא - אינדיקציה ברורה למשתמש לגבי רמות ההתאמה */}
           <div className="bg-[#1a1b1e] border border-white/5 rounded-xl p-4 mb-6 flex flex-col sm:flex-row gap-4 sm:gap-6 text-sm text-[#9aa0a6] shadow-sm">
             <div className="flex items-center gap-2">
@@ -374,7 +318,6 @@ export default function GameReviews({ gameId }) {
               </span>
             </div>
           </div>
-
           {loading ? (
             <div className="flex justify-center py-10">
               <div className="w-10 h-10 border-4 border-[#8ab4f8] border-t-transparent rounded-full animate-spin"></div>
@@ -422,7 +365,6 @@ export default function GameReviews({ gameId }) {
                           </svg>
                         </button>
                       )}
-
                       {/* כפתור מחיקה - יוצג אך ורק למנהלים/בעלים */}
                       {(user.role === "admin" || user.role === "owner") && (
                         <button
@@ -444,32 +386,19 @@ export default function GameReviews({ gameId }) {
                           </svg>
                         </button>
                       )}
-
-                      {/* כפתור דיווח - יוצג לכל משתמש מחובר שהוא לא הכותב */}
-                      {user._id !== review.userId?._id && (
-                        <button
-                          onClick={() => handleReportReview(review._id)}
-                          className="text-[#5f6368] hover:text-[#FBBC05] transition-colors bg-[#202124] p-2 rounded-full border border-transparent hover:border-[#FBBC05]/30"
-                          title="Report Review"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                              clipRule="evenodd"
+                      {/* כפתור דיווח - יוצג למשתמשים רגילים בלבד, שאינם כותבי הביקורת */}
+                      {user.role === "user" &&
+                        user._id !== review.userId?._id && (
+                          <div className="bg-[#202124] p-1.5 rounded-full border border-transparent">
+                            <ReportButton
+                              entityId={review._id}
+                              entityType="review"
                             />
-                          </svg>
-                        </button>
-                      )}
+                          </div>
+                        )}
                     </div>
                   )}
-
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 pr-28">
                     <div className="flex items-center gap-4">
                       <span className="text-[#e8eaed] font-bold text-lg">
                         {review.reviewerName}
@@ -485,13 +414,12 @@ export default function GameReviews({ gameId }) {
                       <span
                         className={`px-4 py-1.5 text-xs font-bold rounded-full border ${getBadgeStyle(
                           review.matchLevel,
-                        )} sm:mr-8 shadow-sm`}
+                        )} shadow-sm`}
                       >
                         {review.matchLevel}
                       </span>
                     )}
                   </div>
-
                   {review.hardwareSnapshot && (
                     <div className="flex flex-wrap gap-2 mb-5">
                       {/* שימוש בפונקציית הניקוי לשמות החומרה */}
@@ -508,7 +436,6 @@ export default function GameReviews({ gameId }) {
                       </span>
                     </div>
                   )}
-
                   {editingReviewId === review._id ? (
                     <form
                       onSubmit={(e) => handleUpdateReview(e, review._id)}
@@ -552,7 +479,7 @@ export default function GameReviews({ gameId }) {
                       </div>
                     </form>
                   ) : (
-                    <p className="text-[#e8eaed] leading-relaxed whitespace-pre-line text-md mr-14">
+                    <p className="text-[#e8eaed] leading-relaxed whitespace-pre-line text-md">
                       {review.text}
                     </p>
                   )}
@@ -564,7 +491,7 @@ export default function GameReviews({ gameId }) {
               ))}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
