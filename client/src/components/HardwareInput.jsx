@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import API_CALL from "../api/API_CALL";
 
-export default function HardwareInput({ type, placeholder, onSelect, value }) {
+export default function HardwareInput({ type, placeholder, onSelect, value, brand }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState([]);
@@ -34,9 +34,11 @@ export default function HardwareInput({ type, placeholder, onSelect, value }) {
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const data = await API_CALL(
-          `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`,
-        );
+        let url = `/api/hardware/search?q=${encodeURIComponent(query)}&type=${encodeURIComponent(type)}&limit=10`;
+        if (brand) {
+          url += `&brand=${encodeURIComponent(brand)}`;
+        }
+        const data = await API_CALL(url);
         if (data.success) {
           setResults(data.data);
         } else {
@@ -49,7 +51,7 @@ export default function HardwareInput({ type, placeholder, onSelect, value }) {
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [query, type]);
+  }, [query, type, brand]);
 
   const handleChange = (e) => {
     const newQuery = e.target.value;

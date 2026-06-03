@@ -1,28 +1,51 @@
 const User = require("../models/User");
-const Game = require("../models/Game")
+const Game = require("../models/Game");
+const Hardware = require("../models/Hardware");
 
 const updateSpecs = async (req, res, next) => {
   try {
-    // Correctly expect cpuId, gpuId, and ramGb from the body
-    const { cpuId, gpuId, ramGb } = req.body;
+    let { cpuId, gpuId, ramGb } = req.body;
 
-    // Validate that all required fields are present
-    if (!cpuId || !gpuId || !ramGb) {
+    // Validate CPU and RAM
+    if (!cpuId || !ramGb) {
       return res
         .status(400)
-        .json({ success: false, message: "Missing required fields: cpuId, gpuId, ramGb" });
+        .json({ success: false, message: "Missing required fields: cpuId, ramGb" });
+    }
+
+    // --- Apple Silicon Logic ---
+    const selectedCpu = await Hardware.findById(cpuId);
+    if (!selectedCpu) {
+      return res.status(404).json({ success: false, message: "CPU not found" });
+    }
+
+    if (selectedCpu.integratedGpuScore && !gpuId) {
+      // For CPUs with integrated GPUs, we can allow missing gpuId 
+      // or assign a generic "Apple Integrated GPU" for consistency if needed.
+      // For now, let's try to find the generic one or just allow it to be null/assigned below.
+      const genericGpu = await Hardware.findOne({ 
+        model: "Apple M1 Virtual GPU", // fallback to a known virtual GPU
+        type: "GPU" 
+      });
+      if (genericGpu) {
+        gpuId = genericGpu._id;
+      }
+    }
+
+    // Final validation
+    if (!gpuId && !selectedCpu.integratedGpuScore) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required field: gpuId" });
     }
 
     const updatedUser = await User.findByIdAndUpdate(
-      // Only use req.user.id, which is reliably set by the verifyToken middleware
       req.user.id,
       {
-        // Update only the 'myPc' object, which is defined in the schema
-        myPc: { cpuId, gpuId, ramGb },
+        myPc: { cpuId, gpuId: gpuId || null, ramGb },
       },
       { new: true, runValidators: true },
     )
-      // Correctly populate the fields within the 'myPc' object
       .populate("myPc.cpuId")
       .populate("myPc.gpuId");
 
@@ -54,7 +77,9 @@ const getRecommendations = async (req, res, next) => {
     }
 
     const userCpuScore = Number(user.myPc.cpuId.benchmarkScore) || 0;
-    const userGpuScore = Number(user.myPc.gpuId.benchmarkScore) || 0;
+    
+    // Priority: CPU's integrated GPU score -> User's selected GPU score
+    const userGpuScore = user.myPc.cpuId.integratedGpuScore || (Number(user.myPc.gpuId?.benchmarkScore) || 0);
     const userRam = Number(user.myPc.ramGb) || 0;
 
     const recommendations = await Game.aggregate([

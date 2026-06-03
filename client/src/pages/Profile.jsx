@@ -110,7 +110,7 @@ export default function Profile() {
       {/* אזור הרקע עם התמונה והטשטוש */}
       <div
         className="absolute top-0 left-0 w-full h-[55vh] bg-cover bg-center bg-no-repeat z-0 pointer-events-none"
-        style={{ backgroundImage: "url('/profile-bg.jpg')" }}
+        style={{ backgroundImage: "url('/profile-bg.webp')" }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#202124]/80 to-[#202124]"></div>
       </div>

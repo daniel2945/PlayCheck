@@ -290,20 +290,27 @@ const syncStatus = async (req, res, next) => {
 
 const searchHardware = async (req, res, next) => {
   try {
-    const { q, type } = req.query;
+    const { q, type, brand } = req.query;
     if (!q || q.length < 2) {
       return res.status(200).json({ success: true, data: [] });
     }
-    const results = await Hardware.find({
+
+    const query = {
       type: type.toUpperCase(),
       $or: [
         { model: { $regex: q, $options: "i" } },
         { brand: { $regex: q, $options: "i" } },
       ],
-    })
+    };
+
+    if (brand) {
+      query.brand = { $regex: brand, $options: "i" };
+    }
+
+    const results = await Hardware.find(query)
       .sort({ benchmarkScore: -1 })
       .limit(10)
-      .select("_id model brand benchmarkScore type");
+      .select("_id model brand benchmarkScore integratedGpuScore type");
     if (!results) {
       res.status(400).json({ success: false, data: "hardwares not found" });
     }

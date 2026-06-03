@@ -87,6 +87,7 @@ export default function Result() {
             myPc: {
               cpuId: guestSpecs.cpu._id,
               gpuId: guestSpecs.gpu._id,
+              gpu: guestSpecs.gpu, // ✨ Send the full object for virtual Apple GPUs
               ramGb: guestSpecs.ram || 16,
             },
           });

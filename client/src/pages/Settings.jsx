@@ -126,7 +126,7 @@ export default function Settings() {
       {/* אזור הרקע עם התמונה והטשטוש */}
       <div
         className="absolute top-0 left-0 w-full h-[55vh] bg-cover bg-center bg-no-repeat z-0 pointer-events-none"
-        style={{ backgroundImage: "url('/settings-bg.jpg')" }}
+        style={{ backgroundImage: "url('/settings-bg.webp')" }}
       >
         {/* הגרדיאנט מתחיל כהה מראש (60%) כדי להבליט את הכותרת */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#202124]/60 via-[#202124]/90 to-[#202124]"></div>

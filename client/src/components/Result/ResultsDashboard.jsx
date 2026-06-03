@@ -116,14 +116,17 @@ export default function ResultsDashboard({
             : user.myPc.gpuId,
         ramGb: user.myPc.ramGb,
       };
-    } else {
+    }
+    if (!token) {
       const guestSpecs = JSON.parse(localStorage.getItem("guestSpecs"));
       if (guestSpecs) {
-        myOriginalPc = {
+        setTestSpecs({
           cpuId: guestSpecs.cpu?._id,
           gpuId: guestSpecs.gpu?._id,
           ramGb: guestSpecs.ram,
-        };
+          cpu: guestSpecs.cpu,
+          gpu: guestSpecs.gpu,
+        });
       }
     }
 
@@ -146,6 +149,7 @@ export default function ResultsDashboard({
         myPc: {
           cpuId: testSpecs.cpuId,
           gpuId: testSpecs.gpuId,
+          gpu: testSpecs.gpu, // ✨ Send full object for virtual/mock GPU support
           ramGb: Number(testSpecs.ramGb),
         },
       });

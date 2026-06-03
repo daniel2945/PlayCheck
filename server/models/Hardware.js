@@ -22,6 +22,10 @@ const hardWareSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    integratedGpuScore: {
+      type: Number,
+      required: false,
+    },
   },
   { timestamps: true },
 );
