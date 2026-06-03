@@ -10,7 +10,7 @@ const registerSchema = z.object({
   userName: z.string().min(3, "Username must be at least 3 characters long"),
   myPc: z.object({
     cpuId: z.string().min(1, "CPU ID is required"),
-    gpuId: z.string().min(1, "GPU ID is required"),
+    gpuId: z.string().optional(),
     ramGb: z.number().min(4, "Minimum 4GB RAM is required"),
   }),
 });

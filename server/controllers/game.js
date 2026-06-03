@@ -1,4 +1,5 @@
 const axios = require("axios");
+const mongoose = require("mongoose");
 const apiKey = process.env.RAWG_API_KEY;
 const Game = require("../models/Game");
 const { parseGameRequirements } = require("../utils/hardwareParser");
@@ -415,18 +416,43 @@ const getOrFetchGame = async (gameId) => {
 const checkCompatibilityGuest = async (req, res, next) => {
   try {
     const gameId = req.params.id;
-    const cpuId = req.body.myPc.cpuId;
-    const gpuId = req.body.myPc.gpuId;
-    const cpuUser = await Hardware.findById(cpuId);
-    const gpuUser = await Hardware.findById(gpuId);
-    const ramUser = req.body.myPc.ramGb;
+    const { cpuId, gpuId, ramGb, gpu } = req.body.myPc || {};
+    
+    // ✨ Handle both "myPc" and "specs" naming conventions
+    const specs = req.body.specs;
+    const finalGpuId = gpuId || (specs && specs.gpu?._id);
+    const finalCpuId = cpuId || (specs && specs.cpu?._id);
+    const finalRam = ramGb || (specs && specs.ram) || req.body.myPc?.ramGb;
+    const providedGpu = gpu || (specs && specs.gpu);
 
-    if (!cpuUser || !gpuUser || !ramUser) {
+    if (!finalCpuId || !finalRam) {
       return res.status(400).json({
         success: false,
         data: "Missing saved PC hardware data for this user.",
       });
     }
+
+    const cpuUser = await Hardware.findById(finalCpuId);
+    if (!cpuUser) {
+      return res.status(404).json({ success: false, data: "CPU not found" });
+    }
+
+    let gpuUser;
+    if (mongoose.Types.ObjectId.isValid(finalGpuId)) {
+      gpuUser = await Hardware.findById(finalGpuId);
+    } else if (providedGpu && providedGpu.benchmarkScore) {
+      // ✨ Use the virtual/mock GPU provided in the request body
+      gpuUser = providedGpu;
+    }
+
+    if (!gpuUser) {
+      return res.status(400).json({
+        success: false,
+        data: "Missing saved GPU data or invalid ID format.",
+      });
+    }
+
+    const ramUser = finalRam;
 
     let game;
     try {
@@ -480,13 +506,16 @@ const checkCompatibilityGuest = async (req, res, next) => {
     };
     // ----------------------------------------------
 
+    const cpuScore = cpuUser.benchmarkScore;
+    const gpuScore = cpuUser.integratedGpuScore || gpuUser.benchmarkScore;
+
     const cpuGrade = getComponentGrade(
-      cpuUser.benchmarkScore,
+      cpuScore,
       minimum.cpuScore,
       recommended.cpuScore,
     );
     const gpuGrade = getComponentGrade(
-      gpuUser.benchmarkScore,
+      gpuScore,
       minimum.gpuScore,
       recommended.gpuScore,
     );
@@ -498,12 +527,12 @@ const checkCompatibilityGuest = async (req, res, next) => {
 
     // הפעלת החישוב החדש
     const cpuDetails = getDetailedPercents(
-      cpuUser.benchmarkScore,
+      cpuScore,
       minimum.cpuScore,
       recommended.cpuScore,
     );
     const gpuDetails = getDetailedPercents(
-      gpuUser.benchmarkScore,
+      gpuScore,
       minimum.gpuScore,
       recommended.gpuScore,
     );
@@ -536,15 +565,15 @@ const checkCompatibilityGuest = async (req, res, next) => {
         specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,
-            userScore: cpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
+            userScore: cpuScore, // ✨ להוסיף את השורה הזו
             min: minimum.cpuText || "Not specified by developer",
             rec: recommended.cpuText || "Not specified by developer",
             minScore: minimum.cpuScore,
             recScore: recommended.cpuScore,
           },
           gpu: {
-            user: `${gpuUser.brand} ${gpuUser.model}`,
-            userScore: gpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
+            user: cpuUser.integratedGpuScore ? `${cpuUser.model} Integrated GPU` : `${gpuUser.brand} ${gpuUser.model}`,
+            userScore: gpuScore, // ✨ להוסיף את השורה הזו
             min: minimum.gpuText || "Not specified by developer",
             rec: recommended.gpuText || "Not specified by developer",
             minScore: minimum.gpuScore,
@@ -641,13 +670,16 @@ const checkCompatibilityUser = async (req, res, next) => {
     };
     // ----------------------------------------------
 
+    const cpuScore = cpuUser.benchmarkScore;
+    const gpuScore = cpuUser.integratedGpuScore || gpuUser.benchmarkScore;
+
     const cpuGrade = getComponentGrade(
-      cpuUser.benchmarkScore,
+      cpuScore,
       minimum.cpuScore,
       recommended.cpuScore,
     );
     const gpuGrade = getComponentGrade(
-      gpuUser.benchmarkScore,
+      gpuScore,
       minimum.gpuScore,
       recommended.gpuScore,
     );
@@ -659,12 +691,12 @@ const checkCompatibilityUser = async (req, res, next) => {
 
     // הפעלת החישוב החדש
     const cpuDetails = getDetailedPercents(
-      cpuUser.benchmarkScore,
+      cpuScore,
       minimum.cpuScore,
       recommended.cpuScore,
     );
     const gpuDetails = getDetailedPercents(
-      gpuUser.benchmarkScore,
+      gpuScore,
       minimum.gpuScore,
       recommended.gpuScore,
     );
@@ -712,15 +744,15 @@ const checkCompatibilityUser = async (req, res, next) => {
         specsDetails: {
           cpu: {
             user: `${cpuUser.brand} ${cpuUser.model}`,
-            userScore: cpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
+            userScore: cpuScore, // ✨ להוסיף את השורה הזו
             min: minimum.cpuText || "Not specified by developer",
             rec: recommended.cpuText || "Not specified by developer",
             minScore: minimum.cpuScore,
             recScore: recommended.cpuScore,
           },
           gpu: {
-            user: `${gpuUser.brand} ${gpuUser.model}`,
-            userScore: gpuUser.benchmarkScore, // ✨ להוסיף את השורה הזו
+            user: cpuUser.integratedGpuScore ? `${cpuUser.model} Integrated GPU` : `${gpuUser.brand} ${gpuUser.model}`,
+            userScore: gpuScore, // ✨ להוסיף את השורה הזו
             min: minimum.gpuText || "Not specified by developer",
             rec: recommended.gpuText || "Not specified by developer",
             minScore: minimum.gpuScore,

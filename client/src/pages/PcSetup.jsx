@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 export default function PcSetup() {
   const navigate = useNavigate(); // הפעלת הניווט
   const { token, setUserPc } = useAuthStore();
+  const [platform, setPlatform] = useState("Intel/AMD");
   const [cpu, setCpu] = useState(null);
   const [gpu, setGpu] = useState(null);
   const [ram, setRam] = useState(16);
@@ -23,7 +24,15 @@ export default function PcSetup() {
   const [isScanning, setIsScanning] = useState(false);
   const [deepScanToken, setDeepScanToken] = useState("");
 
-useEffect(() => {
+  // Update platform when CPU changes
+  useEffect(() => {
+    if (cpu?.brand === "Apple") {
+      setPlatform("Apple");
+      setGpu(null); // No need for manual GPU selection on Apple
+    }
+  }, [cpu]);
+
+  useEffect(() => {
     let interval;
     if (isScanning && deepScanToken) {
       interval = setInterval(async () => {
@@ -93,12 +102,13 @@ useEffect(() => {
   };
 
   const handleSaveAndAnalyze = async () => {
-    if (!cpu || !gpu) {
+    // If Apple platform, GPU is not strictly required from the user (assigned by backend)
+    if (!cpu || (platform !== "Apple" && !gpu)) {
       setSaveMessage("⚠️ Please select both CPU and GPU.");
       return;
     }
 
-    if (!cpu?._id || !gpu?._id) {
+    if (!cpu?._id || (platform !== "Apple" && !gpu?._id)) {
       toast.error(
         "Selected hardware is missing a valid ID. Please re-select from the search results.",
       );
@@ -109,39 +119,56 @@ useEffect(() => {
 
     if (token) {
       try {
-        // שימוש נקי ב-API_CALL במקום fetch ענק
-        const data = await API_CALL("/api/user/specs", "PUT", {
+        const payload = {
           cpuId: cpu._id,
-          gpuId: gpu._id,
-          ramGb: ram, // מוודא שזה תואם לאיך שהשרת שלך מצפה לקבל את זה
-        });
+          ramGb: ram,
+        };
+        if (gpu?._id) payload.gpuId = gpu._id;
+
+        const data = await API_CALL("/api/user/specs", "PUT", payload);
 
         if (data.success) {
-          setUserPc(pcSpecs);
+          setUserPc(data.data.myPc); // Use data from server which includes the auto-assigned GPU
           localStorage.removeItem("guestSpecs");
           setSaveMessage("✅ Specs saved to Cloud!");
         }
-      } catch {
-        setSaveMessage("⚠️ Failed to save to Cloud. Network Error.");
-        return; // במקרה של שגיאה, עוצרים ולא עוברים עמוד
+      } catch (err) {
+        setSaveMessage(`⚠️ Failed to save: ${err.message}`);
+        return;
       }
     } else {
-      // מצב אורח
-      localStorage.setItem("guestSpecs", JSON.stringify({ cpu, gpu, ram }));
+      // Guest Mode: Handle integrated GPU for Apple Silicon
+      let finalGpu = gpu;
+      
+      if (platform === "Apple" && cpu?.integratedGpuScore) {
+        finalGpu = {
+          _id: `apple-integrated-gpu-${cpu._id}`,
+          brand: "Apple",
+          model: `${cpu.model} Integrated GPU`,
+          benchmarkScore: cpu.integratedGpuScore,
+          type: "GPU"
+        };
+      }
+
+      if (platform === "Apple" && !finalGpu) {
+        setSaveMessage("⚠️ Could not determine GPU performance for this Apple chip.");
+        return;
+      }
+
+      localStorage.setItem("guestSpecs", JSON.stringify({ cpu, gpu: finalGpu, ram }));
       setSaveMessage("✅ Specs saved Locally (Guest Mode)!");
     }
 
-    // אחרי השמירה - מעבירים לקטלוג המשחקים כדי שיוכלו לבדוק משחק
     setTimeout(() => {
       navigate("/catalog");
     }, 1500);
   };
+
   return (
     <div className="relative w-full min-h-screen">
-      {/* אזור הרקע עם התמונה והטשטוש */}
       <div
         className="absolute top-0 left-0 w-full h-[55vh] bg-cover bg-center bg-no-repeat z-0 pointer-events-none"
-        style={{ backgroundImage: "url('/setup-bg.jpg')" }}
+        style={{ backgroundImage: "url('/setup-bg.webp')" }}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#202124]/80 to-[#202124]"></div>
       </div>
@@ -151,7 +178,6 @@ useEffect(() => {
           Set Up Your PC Specs
         </h2>
         <div className="w-full max-w-2xl space-y-6">
-          {/* Deep Scan Action Area */}
           <div className="flex flex-col items-center bg-gradient-to-b from-[#303134]/90 to-[#28292c]/90 backdrop-blur-sm p-6 sm:p-8 rounded-3xl border border-[#8ab4f8]/40 shadow-lg gap-4 text-center transition-all hover:border-[#8ab4f8]/60">
             <div className="max-w-lg mb-2">
               <h3 className="text-[#e8eaed] font-bold text-xl mb-2 flex items-center justify-center gap-2">
@@ -172,7 +198,7 @@ useEffect(() => {
                 Deep Scan (Desktop)
               </button>
             </div>
-
+            {/* ... rest of deep scan logic ... */}
             {isScanning && (
               <div className="bg-[#202124] p-5 rounded-xl border border-[#8ab4f8] mt-2 text-center w-full max-w-md animate-fade-in">
                 <p className="text-[#e8eaed] font-bold text-lg mb-3">
@@ -219,7 +245,6 @@ useEffect(() => {
             )}
           </div>
 
-          {/* Divider */}
           <div className="flex items-center w-full py-2 opacity-80">
             <div className="flex-1 h-px bg-[#5f6368]"></div>
             <span className="px-4 text-[#9aa0a6] text-sm font-bold uppercase tracking-widest">
@@ -228,19 +253,62 @@ useEffect(() => {
             <div className="flex-1 h-px bg-[#5f6368]"></div>
           </div>
 
-          <HardwareInput
-            type="CPU"
-            placeholder="Search CPU (e.g. i7 13700K)..."
-            onSelect={setCpu}
-            value={cpu}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-[#9aa0a6] text-xs font-bold uppercase ml-4">Platform</label>
+              <select 
+                value={platform}
+                onChange={(e) => {
+                  setPlatform(e.target.value);
+                  setCpu(null);
+                  setGpu(null);
+                }}
+                className="bg-[#303134] border border-[#5f6368] text-[#e8eaed] rounded-full px-5 py-3.5 outline-none focus:border-[#8ab4f8] transition-all appearance-none cursor-pointer"
+              >
+                <option value="Intel/AMD">Intel / AMD / Other</option>
+                <option value="Apple">Apple Silicon (M1/M2/M3/M4)</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-[#9aa0a6] text-xs font-bold uppercase ml-4">CPU</label>
+              <HardwareInput
+                type="CPU"
+                placeholder={platform === "Apple" ? "Search Apple M-series..." : "Search CPU (e.g. i7 13700K)..."}
+                onSelect={setCpu}
+                value={cpu}
+                brand={platform === "Apple" ? "Apple" : ""}
+              />
+            </div>
+          </div>
 
-          <HardwareInput
-            type="GPU"
-            placeholder="Search GPU (e.g. RTX 4070)..."
-            onSelect={setGpu}
-            value={gpu}
-          />
+          {platform !== "Apple" && (
+            <div className="flex flex-col gap-2">
+              <label className="text-[#9aa0a6] text-xs font-bold uppercase ml-4">GPU</label>
+              <HardwareInput
+                type="GPU"
+                placeholder="Search GPU (e.g. RTX 4070)..."
+                onSelect={setGpu}
+                value={gpu}
+              />
+            </div>
+          )}
+
+          {platform === "Apple" && cpu && (
+            <div className="bg-[#303134]/50 border border-[#8ab4f8]/30 rounded-2xl p-4 flex items-center gap-4 animate-fade-in">
+              <div className="bg-[#8ab4f8]/10 p-3 rounded-full">
+                <span className="text-xl">🍎</span>
+              </div>
+              <div>
+                <p className="text-[#e8eaed] font-medium text-sm">Apple Silicon Detected</p>
+                <p className="text-[#9aa0a6] text-xs">
+                  {cpu.integratedGpuScore 
+                    ? `Integrated GPU score (${cpu.integratedGpuScore}) will be used for compatibility.`
+                    : `We'll automatically determine the best GPU performance for your ${cpu.model}.`}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="bg-[#303134]/90 backdrop-blur-sm p-5 sm:p-7 rounded-3xl border border-[#5f6368] shadow-lg">
             <div className="flex justify-between mb-4 text-[#e8eaed]">
